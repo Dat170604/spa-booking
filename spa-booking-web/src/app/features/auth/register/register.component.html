@@ -1,0 +1,103 @@
+<div class="register-container">
+  <div class="register-card">
+    <h2>Tạo Tài Khoản Mới</h2>
+    <p class="subtitle">Đăng ký để trải nghiệm dịch vụ Spa cao cấp</p>
+
+    <!-- Thông báo lỗi tổng quát từ Backend -->
+    <div *ngIf="errorMessage" class="alert alert-danger">
+      {{ errorMessage }}
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      <!-- Họ và tên -->
+      <div class="form-group">
+        <label for="fullName">Họ và tên</label>
+        <input
+          type="text"
+          id="fullName"
+          formControlName="fullName"
+          placeholder="Nguyễn Văn A"
+          [ngClass]="{ 'is-invalid': f['fullName'].touched && f['fullName'].errors }"
+        />
+        <div *ngIf="f['fullName'].touched && f['fullName'].errors" class="invalid-feedback">
+          <small *ngIf="f['fullName'].errors['required']">Họ tên không được để trống</small>
+          <small *ngIf="f['fullName'].errors['maxlength']">Họ tên không vượt quá 100 ký tự</small>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="example@gmail.com"
+          [ngClass]="{ 'is-invalid': f['email'].touched && f['email'].errors }"
+        />
+        <div *ngIf="f['email'].touched && f['email'].errors" class="invalid-feedback">
+          <small *ngIf="f['email'].errors['required']">Email không được để trống</small>
+          <small *ngIf="f['email'].errors['email']">Email không đúng định dạng</small>
+        </div>
+      </div>
+
+      <!-- Số điện thoại -->
+      <div class="form-group">
+        <label for="phone">Số điện thoại</label>
+        <input
+          type="text"
+          id="phone"
+          formControlName="phone"
+          placeholder="0912345678"
+          [ngClass]="{ 'is-invalid': f['phone'].touched && f['phone'].errors }"
+        />
+        <div *ngIf="f['phone'].touched && f['phone'].errors" class="invalid-feedback">
+          <small *ngIf="f['phone'].errors['required']">Số điện thoại không được để trống</small>
+          <small *ngIf="f['phone'].errors['pattern']">Số điện thoại không hợp lệ (ví dụ: 0912345678)</small>
+        </div>
+      </div>
+
+      <!-- Mật khẩu -->
+      <div class="form-group">
+        <label for="password">Mật khẩu</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          placeholder="••••••••"
+          [ngClass]="{ 'is-invalid': f['password'].touched && f['password'].errors }"
+        />
+        <div *ngIf="f['password'].touched && f['password'].errors" class="invalid-feedback">
+          <small *ngIf="f['password'].errors['required']">Mật khẩu không được để trống</small>
+          <small *ngIf="f['password'].errors['minlength']">Mật khẩu phải chứa ít nhất 6 ký tự</small>
+        </div>
+      </div>
+
+      <!-- Nhập lại mật khẩu -->
+      <div class="form-group">
+        <label for="confirmPassword">Xác nhận mật khẩu</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          formControlName="confirmPassword"
+          placeholder="••••••••"
+          [ngClass]="{ 'is-invalid': f['confirmPassword'].touched && f['confirmPassword'].errors }"
+        />
+        <div *ngIf="f['confirmPassword'].touched && f['confirmPassword'].errors" class="invalid-feedback">
+          <small *ngIf="f['confirmPassword'].errors['required']">Vui lòng nhập lại mật khẩu</small>
+          <small *ngIf="f['confirmPassword'].errors['passwordMismatch']">Mật khẩu xác nhận không khớp</small>
+        </div>
+      </div>
+
+      <!-- Nút Đăng ký -->
+      <button type="submit" class="btn-submit" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Tạo Tài Khoản</span>
+        <span *ngIf="isLoading">Đang xử lý...</span>
+      </button>
+    </form>
+
+    <div class="register-footer">
+      <p>Đã có tài khoản? <a routerLink="/login">Đăng nhập ngay</a></p>
+    </div>
+  </div>
+</div>
