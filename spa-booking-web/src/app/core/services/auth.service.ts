@@ -10,13 +10,13 @@ import { TokenService } from './token.service';
 })
 export class AuthService {
   private readonly API_URL = `${environment.apiUrl}/auth`;
-  
+
   private currentUserSubject!: BehaviorSubject<any>;
   public currentUser$!: Observable<any>;
 
   constructor(
     private http: HttpClient,
-    private tokenService: TokenService  
+    private tokenService: TokenService
   ) {
     this.currentUserSubject = new BehaviorSubject<any>(this.tokenService.getUserInfo());
     this.currentUser$ = this.currentUserSubject.asObservable();
@@ -63,4 +63,5 @@ export class AuthService {
     this.tokenService.saveUserInfo(userInfo);
     this.currentUserSubject.next(userInfo);
   }
+
 }

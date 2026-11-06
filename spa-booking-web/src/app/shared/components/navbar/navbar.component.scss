@@ -1,0 +1,32 @@
+// Hiệu ứng mờ nền mượt mà cho Navbar (Glassmorphism effect)
+nav {
+  backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.95);
+  transition: all 0.3s ease;
+}
+
+// Custom animation cho Dropdown Menu
+.origin-top-right {
+  animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Active link styling khi chuyển trang
+a.router-link-active {
+  font-weight: 600;
+}
+
+// Tối ưu trải nghiệm bấm nút trên thiết bị di động
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
