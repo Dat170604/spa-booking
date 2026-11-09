@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 @Table(name = "appointment_details")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class AppointmentDetailEntity {
 
     @Id
@@ -28,7 +28,7 @@ public class AppointmentDetailEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "staff_id")
-    private UserEntity staff;
+    private UserEntity staff; // Kỹ thuật viên (có thể NULL)
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;

@@ -10,8 +10,12 @@ CREATE TABLE branches (
                           name VARCHAR(150) NOT NULL,
                           address VARCHAR(255) NOT NULL,
                           phone VARCHAR(20) NOT NULL,
-                          status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, INACTIVE
-                          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                          email VARCHAR(100),
+                          description TEXT,
+                          image_url VARCHAR(255),
+                          open_time TIME,
+                          close_time TIME,
+                          is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- Bảng 3: Người dùng (Users - Khách hàng, KTV, Admin)

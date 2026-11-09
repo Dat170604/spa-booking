@@ -36,7 +36,6 @@ export class RegisterComponent implements OnInit {
     }, { validators: this.passwordMatchValidator });
   }
 
-  // Custom Validator kiểm tra Mật khẩu nhập lại có khớp không
   private passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
     const password = control.get('password')?.value;
     const confirmPassword = control.get('confirmPassword')?.value;
@@ -57,14 +56,31 @@ export class RegisterComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Loại bỏ field confirmPassword trước khi gửi request lên Backend
     const { confirmPassword, ...registerData } = this.registerForm.value;
 
+    // Bước 1: Gọi API Register
     this.authService.register(registerData).subscribe({
       next: () => {
-        this.isLoading = false;
-        // Đăng ký thành công -> Luồng 1 tự động đăng nhập & chuyển về trang chủ
-        this.router.navigate(['/']);
+        // Bước 2: Đăng ký thành công -> Tự động gọi API Login bằng Email & Password vừa nhập
+        this.authService.login({
+          email: registerData.email,
+          password: registerData.password
+        }).subscribe({
+          next: (res) => {
+            this.isLoading = false;
+            const roles: string[] = res?.roles || [];
+            if (roles.includes('ROLE_ADMIN') || roles.includes('ROLE_STAFF')) {
+              this.router.navigate(['/admin/dashboard']);
+            } else {
+              this.router.navigate(['/']);
+            }
+          },
+          error: () => {
+            this.isLoading = false;
+            // Nếu đăng nhập tự động thất bại thì đưa về trang đăng nhập
+            this.router.navigate(['/auth/login']);
+          }
+        });
       },
       error: (err) => {
         this.isLoading = false;

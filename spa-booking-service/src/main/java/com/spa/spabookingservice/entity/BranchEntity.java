@@ -3,15 +3,15 @@ package com.spa.spabookingservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.OffsetDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "branches")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class BranchEntity {
 
     @Id
@@ -27,10 +27,22 @@ public class BranchEntity {
     @Column(nullable = false, length = 20)
     private String phone;
 
-    @Builder.Default
-    @Column(length = 20)
-    private String status = "ACTIVE";
+    @Column(length = 100)
+    private String email;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @Column(name = "open_time")
+    private LocalTime openTime;
+
+    @Column(name = "close_time")
+    private LocalTime closeTime;
+
+    @Builder.Default
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
 }

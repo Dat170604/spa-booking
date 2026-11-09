@@ -1,0 +1,62 @@
+<div class="bg-slate-50 min-h-screen py-10 px-4">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="text-center max-w-2xl mx-auto mb-10">
+      <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight mb-2">Hệ Thống Chi Nhánh Lotus Spa</h1>
+      <p class="text-slate-500 text-sm">Không gian sang trọng, hiện đại với đội ngũ kỹ thuật viên giàu kinh nghiệm sẵn sàng phục vụ bạn.</p>
+    </div>
+
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="flex justify-center items-center py-20">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+    </div>
+
+    <!-- Error Alert -->
+    <div *ngIf="errorMessage" class="bg-red-50 text-red-700 p-4 rounded-xl text-center text-sm mb-6 border border-red-200">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Branch Grid -->
+    <div *ngIf="!isLoading && branches.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div *ngFor="let branch of branches" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col justify-between">
+        <div>
+          <div class="h-48 bg-slate-200 relative">
+            <img [src]="branch.imageUrl || 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80'"
+                 [alt]="branch.name"
+                 class="w-full h-full object-cover" />
+            <span class="absolute top-3 right-3 bg-emerald-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow">
+              Đang hoạt động
+            </span>
+          </div>
+
+          <div class="p-6 space-y-3">
+            <h3 class="text-xl font-bold text-slate-800">{{ branch.name }}</h3>
+            <p class="text-slate-500 text-xs line-clamp-2">{{ branch.description || 'Không gian yên tĩnh, thư thái dành cho quý khách.' }}</p>
+
+            <div class="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
+              <div class="flex items-start gap-2">
+                <span class="text-base">📍</span>
+                <span>{{ branch.address }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-base">📞</span>
+                <span class="font-medium text-slate-800">{{ branch.phone }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-base">🕒</span>
+                <span class="text-emerald-700 font-semibold">Mo-Su: {{ branch.openTime }} - {{ branch.closeTime }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-6 pt-0">
+          <a routerLink="/booking" [queryParams]="{ branchId: branch.id }"
+             class="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm">
+            Đặt Lịch Tại Chi Nhánh Này
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

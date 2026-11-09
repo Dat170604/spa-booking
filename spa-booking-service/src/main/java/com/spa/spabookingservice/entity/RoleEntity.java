@@ -7,9 +7,9 @@ import lombok.*;
 @Table(name = "roles")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class RoleEntity {
 
     @Id

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface AppointmentRepository extends JpaRepository<AppointmentEntity, Long> {
-    List<AppointmentEntity> findByCustomerId(Long customerId);
-    List<AppointmentEntity> findByBranchIdAndAppointmentDate(Long branchId, LocalDate appointmentDate);
+    List<AppointmentEntity> findByCustomerIdOrderByAppointmentDateDescStartTimeDesc(Long customerId);
+    List<AppointmentEntity> findByBranchId(Long branchId);
+    List<AppointmentEntity> findByStatus(String status);
 }

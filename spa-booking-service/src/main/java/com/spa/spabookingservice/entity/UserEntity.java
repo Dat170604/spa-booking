@@ -1,9 +1,9 @@
 package com.spa.spabookingservice.entity;
 
-import com.spa.spabookingservice.entity.BranchEntity;
-import com.spa.spabookingservice.entity.RoleEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -13,9 +13,9 @@ import java.util.Set;
 @Table(name = "users")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class UserEntity {
 
     @Id
@@ -24,7 +24,7 @@ public class UserEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id")
-    private BranchEntity branchEntity;
+    private BranchEntity branch;
 
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
@@ -42,18 +42,20 @@ public class UserEntity {
     @Column(length = 20)
     private String status = "ACTIVE";
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
+    @Builder.Default
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    @Builder.Default
     private Set<RoleEntity> roles = new HashSet<>();
-
-    @Column(name = "created_at", insertable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", insertable = false, updatable = false)
-    private OffsetDateTime updatedAt;
 }

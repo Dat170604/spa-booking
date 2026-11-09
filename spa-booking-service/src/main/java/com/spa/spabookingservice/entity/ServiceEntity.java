@@ -2,6 +2,7 @@ package com.spa.spabookingservice.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -10,9 +11,9 @@ import java.time.OffsetDateTime;
 @Table(name = "services")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ServiceEntity {
 
     @Id
@@ -35,6 +36,7 @@ public class ServiceEntity {
     @Column(length = 20)
     private String status = "ACTIVE";
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 }

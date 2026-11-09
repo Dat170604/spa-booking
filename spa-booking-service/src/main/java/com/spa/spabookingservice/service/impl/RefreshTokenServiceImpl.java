@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,7 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RefreshTokenServiceImpl implements RefreshTokenService {
 
-    @Value("${jwt.refresh-expiration-ms:604800000}") // Mặc định 7 ngày
+    @Value("${jwt.refresh-expiration-ms:604800000}")
     private Long refreshTokenDurationMs;
 
     private final RefreshTokenRepository refreshTokenRepository;
@@ -43,7 +45,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         RefreshTokenEntity refreshToken = RefreshTokenEntity.builder()
                 .user(user)
                 .token(UUID.randomUUID().toString())
-                .expiryDate(Instant.now().plusMillis(refreshTokenDurationMs))
+                .expiryDate(
+                        Instant.now()
+                                .plusMillis(refreshTokenDurationMs)
+                                .atOffset(ZoneOffset.UTC)
+                )
                 .build();
 
         return refreshTokenRepository.save(refreshToken);
@@ -52,13 +58,22 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     public RefreshTokenEntity verifyExpiration(RefreshTokenEntity token) {
         if (token.isRevoked()) {
-            throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN, "Token đã bị thu hồi");
+            throw new AppException(
+                    ErrorCode.INVALID_REFRESH_TOKEN,
+                    "Token đã bị thu hồi"
+            );
         }
 
-        if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
+        OffsetDateTime now = Instant.now().atOffset(ZoneOffset.UTC);
+
+        if (token.getExpiryDate().isBefore(now)) {
             refreshTokenRepository.delete(token);
-            throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN, "Refresh token đã hết hạn. Vui lòng đăng nhập lại");
+            throw new AppException(
+                    ErrorCode.INVALID_REFRESH_TOKEN,
+                    "Refresh token đã hết hạn. Vui lòng đăng nhập lại"
+            );
         }
+
         return token;
     }
 
@@ -76,6 +91,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     public int deleteByUserId(Long userId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
         return refreshTokenRepository.deleteByUser(user);
     }
 }

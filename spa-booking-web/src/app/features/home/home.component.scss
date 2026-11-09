@@ -1,0 +1,30 @@
+.home-page {
+  /* Hiệu ứng Hero Banner */
+  .hero-section {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      pointer-events: none;
+    }
+  }
+
+  /* Card feature hover effect */
+  .feature-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+  }
+}
