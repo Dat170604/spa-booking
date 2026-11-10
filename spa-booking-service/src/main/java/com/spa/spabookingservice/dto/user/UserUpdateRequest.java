@@ -24,8 +24,4 @@ public class UserUpdateRequest {
     private String phone;
 
     private String password; // Để trống nếu không muốn đổi mật khẩu
-
-    private Long branchId;
-
-    private String status; // ACTIVE, INACTIVE
 }

@@ -1,0 +1,62 @@
+<div class="p-6 space-y-6 bg-slate-900 text-slate-100 min-h-screen">
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold">📅 Quản Lý Đặt Lịch Hẹn</h1>
+      <p class="text-slate-400 text-sm">Xem và cập nhật trạng thái lịch hẹn của khách hàng</p>
+    </div>
+
+    <!-- Filter -->
+    <select [(ngModel)]="selectedStatus" (change)="filterAppointments()" class="bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+      <option value="ALL">Tất cả trạng thái</option>
+      <option value="PENDING">PENDING (Chờ xác nhận)</option>
+      <option value="CONFIRMED">CONFIRMED (Đã xác nhận)</option>
+      <option value="COMPLETED">COMPLETED (Hoàn thành)</option>
+      <option value="CANCELLED">CANCELLED (Đã hủy)</option>
+    </select>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-slate-800/80 rounded-2xl border border-slate-700/60 overflow-hidden">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-slate-800 text-slate-400 uppercase text-xs">
+      <tr>
+        <th class="px-6 py-4">Mã / Khách hàng</th>
+        <th class="px-6 py-4">Chi nhánh</th>
+        <th class="px-6 py-4">Thời gian</th>
+        <th class="px-6 py-4">Tổng tiền</th>
+        <th class="px-6 py-4">Trạng thái</th>
+        <th class="px-6 py-4 text-center">Hành động</th>
+      </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-700/50 text-slate-300">
+      <tr *ngFor="let item of filteredAppointments" class="hover:bg-slate-700/30 transition">
+        <td class="px-6 py-4">
+          <p class="font-bold text-white">#BK-{{ item.id }}</p>
+          <p class="text-xs text-slate-400">{{ item.customerName }} - {{ item.customerPhone }}</p>
+        </td>
+        <td class="px-6 py-4 text-emerald-400 font-medium">{{ item.branchName }}</td>
+        <td class="px-6 py-4">
+          <p class="font-semibold">{{ item.appointmentDate }}</p>
+          <p class="text-xs text-slate-400">{{ item.startTime }} - {{ item.endTime }}</p>
+        </td>
+        <td class="px-6 py-4 font-bold text-amber-400">{{ item.totalAmount | currency:'VND':'symbol':'1.0-0' }}</td>
+        <td class="px-6 py-4">
+            <span [ngClass]="{
+              'bg-amber-500/20 text-amber-400 border-amber-500/30': item.status === 'PENDING',
+              'bg-blue-500/20 text-blue-400 border-blue-500/30': item.status === 'CONFIRMED',
+              'bg-emerald-500/20 text-emerald-400 border-emerald-500/30': item.status === 'COMPLETED',
+              'bg-red-500/20 text-red-400 border-red-500/30': item.status === 'CANCELLED'
+            }" class="px-3 py-1 rounded-full text-xs font-semibold border">
+              {{ item.status }}
+            </span>
+        </td>
+        <td class="px-6 py-4 text-center space-x-2">
+          <button *ngIf="item.status === 'PENDING'" (click)="changeStatus(item.id, 'CONFIRMED')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium">Xác nhận</button>
+          <button *ngIf="item.status === 'CONFIRMED'" (click)="changeStatus(item.id, 'COMPLETED')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium">Hoàn thành</button>
+          <button *ngIf="item.status !== 'CANCELLED' && item.status !== 'COMPLETED'" (click)="changeStatus(item.id, 'CANCELLED')" class="bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white text-xs px-3 py-1.5 rounded-lg">Hủy</button>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

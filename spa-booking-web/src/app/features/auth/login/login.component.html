@@ -1,55 +1,77 @@
-<div class="login-container">
-  <div class="login-card">
-    <h2>Đăng Nhập Spa Booking</h2>
-    <p class="subtitle">Vui lòng nhập tài khoản để tiếp tục đặt lịch</p>
+<div class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+  <div class="w-full max-w-md bg-slate-800/90 border border-slate-700/80 rounded-2xl p-8 shadow-2xl backdrop-blur-sm space-y-6">
 
-    <!-- Thông báo lỗi tổng quát từ Backend -->
-    <div *ngIf="errorMessage" class="alert alert-danger">
-      {{ errorMessage }}
+    <!-- Header -->
+    <div class="text-center space-y-2">
+      <h2 class="text-2xl font-bold text-white tracking-wide">Đăng Nhập Spa Booking</h2>
+      <p class="text-sm text-slate-400">Vui lòng nhập tài khoản để tiếp tục đặt lịch</p>
     </div>
 
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <!-- Thông báo lỗi tổng quát từ Backend (Hiển thị số lần nhập sai / Lỗi khóa tài khoản Redis) -->
+    <div *ngIf="errorMessage" class="p-3.5 bg-red-500/10 border border-red-500/40 rounded-xl text-red-400 text-xs text-center font-medium leading-relaxed animate-fade-in">
+      ⚠️ {{ errorMessage }}
+    </div>
+
+    <!-- Form Đăng Nhập -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-5">
+
       <!-- Email Field -->
-      <div class="form-group">
-        <label for="email">Email</label>
+      <div class="space-y-1.5">
+        <label for="email" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Email</label>
         <input
           type="email"
           id="email"
           formControlName="email"
-          placeholder="example@gmail.com"
-          [ngClass]="{ 'is-invalid': f['email'].touched && f['email'].errors }"
+          placeholder="admin@spa.com"
+          class="w-full bg-slate-900/90 border text-slate-100 placeholder-slate-500 rounded-xl px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+          [ngClass]="{ 'border-red-500/80 focus:border-red-500 focus:ring-red-500': f['email'].touched && f['email'].errors, 'border-slate-700': !(f['email'].touched && f['email'].errors) }"
         />
-        <div *ngIf="f['email'].touched && f['email'].errors" class="invalid-feedback">
-          <small *ngIf="f['email'].errors['required']">Email không được để trống</small>
-          <small *ngIf="f['email'].errors['email']">Email không đúng định dạng</small>
+        <div *ngIf="f['email'].touched && f['email'].errors" class="text-red-400 text-xs space-y-0.5 pt-0.5">
+          <small *ngIf="f['email'].errors['required']" class="block">Email không được để trống</small>
+          <small *ngIf="f['email'].errors['email']" class="block">Email không đúng định dạng</small>
         </div>
       </div>
 
       <!-- Password Field -->
-      <div class="form-group">
-        <label for="password">Mật khẩu</label>
+      <div class="space-y-1.5">
+        <label for="password" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Mật khẩu</label>
         <input
           type="password"
           id="password"
           formControlName="password"
           placeholder="••••••••"
-          [ngClass]="{ 'is-invalid': f['password'].touched && f['password'].errors }"
+          class="w-full bg-slate-900/90 border text-slate-100 placeholder-slate-500 rounded-xl px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+          [ngClass]="{ 'border-red-500/80 focus:border-red-500 focus:ring-red-500': f['password'].touched && f['password'].errors, 'border-slate-700': !(f['password'].touched && f['password'].errors) }"
         />
-        <div *ngIf="f['password'].touched && f['password'].errors" class="invalid-feedback">
-          <small *ngIf="f['password'].errors['required']">Mật khẩu không được để trống</small>
-          <small *ngIf="f['password'].errors['minlength']">Mật khẩu phải có ít nhất 6 ký tự</small>
+        <div *ngIf="f['password'].touched && f['password'].errors" class="text-red-400 text-xs space-y-0.5 pt-0.5">
+          <small *ngIf="f['password'].errors['required']" class="block">Mật khẩu không được để trống</small>
+          <small *ngIf="f['password'].errors['minlength']" class="block">Mật khẩu phải có ít nhất 6 ký tự</small>
         </div>
       </div>
 
       <!-- Submit Button -->
-      <button type="submit" class="btn-submit" [disabled]="isLoading">
+      <button
+        type="submit"
+        [disabled]="isLoading"
+        class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition duration-200 shadow-lg shadow-emerald-900/20 text-sm">
         <span *ngIf="!isLoading">Đăng Nhập</span>
-        <span *ngIf="isLoading">Đang xử lý...</span>
+        <span *ngIf="isLoading" class="flex items-center justify-center gap-2">
+          <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Đang xử lý...
+        </span>
       </button>
     </form>
 
-    <div class="login-footer">
-      <p>Chưa có tài khoản? <a routerLink="/register">Đăng ký ngay</a></p>
+    <!-- Footer Link -->
+    <div class="text-center pt-2 border-t border-slate-700/60">
+      <p class="text-xs text-slate-400">
+        Chưa có tài khoản?
+        <a routerLink="/register" class="text-emerald-400 hover:text-emerald-300 font-semibold transition underline underline-offset-4">Đăng ký ngay</a>
+      </p>
     </div>
+
   </div>
 </div>

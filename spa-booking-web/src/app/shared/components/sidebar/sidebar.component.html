@@ -1,55 +1,64 @@
 <aside
+  class="sidebar bg-slate-900 border-r border-slate-800 text-slate-300 min-h-screen transition-all duration-300 flex flex-col justify-between"
   [ngClass]="{ 'w-64': !isCollapsed, 'w-20': isCollapsed }"
-  class="bg-slate-900 text-slate-300 min-h-screen flex flex-col justify-between transition-all duration-300 shadow-xl border-r border-slate-800">
-
+>
+  <!-- Header / Logo -->
   <div>
-    <!-- Header của Sidebar -->
-    <div class="h-16 flex items-center justify-between px-4 border-b border-slate-800">
-      <div *ngIf="!isCollapsed" class="flex items-center gap-2 font-bold text-lg text-emerald-400">
-        <span>✨ Admin Portal</span>
-      </div>
-      <div *ngIf="isCollapsed" class="mx-auto font-bold text-emerald-400 text-xl">
-        ✨
+    <div class="h-16 flex items-center justify-between px-4 border-b border-slate-800/80">
+      <div *ngIf="!isCollapsed" class="flex items-center gap-3 animate-fade-in">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-emerald-900/30">
+          ✨
+        </div>
+        <span class="font-bold text-lg text-white tracking-wide">Lotus Spa</span>
       </div>
 
-      <!-- Nút Thu gọn / Mở rộng Sidebar -->
-      <button (click)="toggleSidebar()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                [attr.d]="isCollapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'"/>
+      <!-- Toggle Collapse Button -->
+      <button
+        (click)="toggleSidebar()"
+        class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition mx-auto"
+        [title]="isCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'"
+      >
+        <svg class="w-5 h-5 transition-transform duration-300" [ngClass]="{ 'rotate-180': isCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
         </svg>
       </button>
     </div>
 
-    <!-- Navigation List -->
-    <nav class="p-3 space-y-1">
+    <!-- Navigation Menu List -->
+    <nav class="p-3 space-y-1.5">
+      <!-- Sửa *for thành *ngFor -->
       <ng-container *ngFor="let item of menuItems">
-        <a *ngIf="hasPermission(item.roles)"
-           [routerLink]="item.route"
-           routerLinkActive="bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-900/40"
-           class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition group cursor-pointer">
-
-          <!-- Icon -->
-          <svg class="w-6 h-6 flex-shrink-0 transition group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="item.icon"/>
+        <a
+          *ngIf="hasPermission(item.roles)"
+          [routerLink]="item.route"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="nav-item group flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-slate-800 hover:text-white"
+          [title]="isCollapsed ? item.label : ''"
+        >
+          <!-- Dynamic SVG Icon -->
+          <svg class="w-5 h-5 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" [attr.d]="item.icon"/>
           </svg>
 
-          <!-- Title (Ẩn khi thu gọn) -->
-          <span *ngIf="!isCollapsed" class="text-sm truncate">
-            {{ item.label }}
-          </span>
+          <!-- Label Menu -->
+          <span *ngIf="!isCollapsed" class="truncate tracking-wide">
+        {{ item.label }}
+      </span>
         </a>
       </ng-container>
     </nav>
   </div>
 
-  <!-- Bottom Action: Về trang chủ -->
-  <div class="p-3 border-t border-slate-800">
-    <a routerLink="/" class="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-emerald-400 transition">
-      <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-      </svg>
-      <span *ngIf="!isCollapsed" class="text-sm font-medium">Trang Khách Hàng</span>
-    </a>
+  <!-- Footer Info / User Roles Info (Chỉ hiện khi mở rộng) -->
+  <div *ngIf="!isCollapsed" class="p-4 border-t border-slate-800/80">
+    <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 text-xs space-y-1">
+      <div class="text-slate-400">Quyền truy cập:</div>
+      <div class="flex flex-wrap gap-1">
+        <span *ngFor="let role of userRoles" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[10px]">
+          {{ role }}
+        </span>
+      </div>
+    </div>
   </div>
 </aside>

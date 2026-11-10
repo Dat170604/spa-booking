@@ -46,11 +46,6 @@ public class DataInitializer implements ApplicationRunner {
                         RoleEntity.builder().name("ROLE_ADMIN").build()
                 ));
 
-        RoleEntity customerRole = roleRepository.findByName("ROLE_CUSTOMER")
-                .orElseGet(() -> roleRepository.save(
-                        RoleEntity.builder().name("ROLE_CUSTOMER").build()
-                ));
-
         // 2. Tạo tài khoản Admin từ cấu hình trong YML
         if (!userRepository.existsByEmail(adminEmail)) {
             UserEntity adminUser = UserEntity.builder()
@@ -59,7 +54,7 @@ public class DataInitializer implements ApplicationRunner {
                     .phone(adminPhone)
                     .password(passwordEncoder.encode(adminPassword))
                     .status("ACTIVE")
-                    .roles(Set.of(adminRole, customerRole))
+                    .roles(Set.of(adminRole))
                     .build();
 
             userRepository.save(adminUser);

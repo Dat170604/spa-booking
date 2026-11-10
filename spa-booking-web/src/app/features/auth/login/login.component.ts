@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -20,6 +20,7 @@ export class LoginComponent implements OnInit {
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -60,6 +61,7 @@ export class LoginComponent implements OnInit {
         this.isLoading = false;
         this.errorMessage =
           err.error?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại Email và Mật khẩu!';
+        this.cdr.detectChanges();
       },
     });
   }

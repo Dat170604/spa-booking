@@ -79,20 +79,9 @@ public class UserServiceImpl implements UserService {
             throw new AppException(ErrorCode.CONFLICT, "Số điện thoại đã được sử dụng bởi tài khoản khác");
         }
 
-        BranchEntity branch = null;
-        if (request.getBranchId() != null) {
-            branch = branchRepository.findById(request.getBranchId())
-                    .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Không tìm thấy chi nhánh"));
-        }
-
         user.setFullName(request.getFullName());
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
-        user.setBranch(branch);
-
-        if (request.getStatus() != null) {
-            user.setStatus(request.getStatus());
-        }
 
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -116,6 +105,21 @@ public class UserServiceImpl implements UserService {
 
         user.setRoles(roles);
         return mapToResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateUserBranch(Long userId, Long branchId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Không tìm thấy người dùng"));
+
+        BranchEntity branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Không tìm thấy chi nhánh"));
+
+        user.setBranch(branch);
+        UserEntity updatedUser = userRepository.save(user);
+
+        return mapToResponse(updatedUser); // Phương thức map Entity -> DTO của bạn
     }
 
     @Override

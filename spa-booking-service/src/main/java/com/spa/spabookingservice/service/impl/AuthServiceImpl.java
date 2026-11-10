@@ -99,36 +99,58 @@ public class AuthServiceImpl implements AuthService {
         String lockKey = "account_locked:" + email;
         String attemptsKey = "failed_attempts:" + email;
 
-        //  Kiểm tra xem Key bị khóa có tồn tại trên Redis không
+        // 1. Kiểm tra xem Tài khoản có đang bị khóa trên Redis không
         if (Boolean.TRUE.equals(redisTemplate.hasKey(lockKey))) {
             Long expireSeconds = redisTemplate.getExpire(lockKey, TimeUnit.SECONDS);
             long minutesLeft = (expireSeconds != null && expireSeconds > 0) ? (expireSeconds / 60) + 1 : 1;
 
             throw new AppException(ErrorCode.ACCOUNT_LOCKED,
-                    String.format("Tài khoản bị tạm khóa do nhập sai 5 lần. Vui lòng thử lại sau %d phút.", minutesLeft));
+                    String.format("Tài khoản bị tạm khóa do nhập sai 5 lần liên tiếp. Vui lòng thử lại sau %d phút.", minutesLeft));
         }
 
-        //  Kiểm tra tài khoản trong DB
+        // 2. Kiểm tra sự tồn tại của User trong Database trước
         UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS, "Email hoặc mật khẩu không chính xác"));
 
         if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
-            throw new AppException(ErrorCode.ACCOUNT_DISABLED);
+            throw new AppException(ErrorCode.ACCOUNT_DISABLED, "Tài khoản của bạn đã bị khóa hoặc chưa kích hoạt");
         }
 
+        // 3. Thực hiện Xác thực Email & Password
         try {
-            //  Xác thực Email và Password qua Spring Security
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
         } catch (BadCredentialsException e) {
-            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
+            // --- CHỖ CẦN BỔ SUNG QUAN TRỌNG NHẤT ---
+            // Tăng số lần thử sai trong Redis lên 1
+            Long failedAttempts = redisTemplate.opsForValue().increment(attemptsKey);
+
+            // Nếu là lần đầu tiên nhập sai, đặt thời gian sống cho key đếm sai (ví dụ: giữ trong 10 phút)
+            if (failedAttempts != null && failedAttempts == 1) {
+                redisTemplate.expire(attemptsKey, LOCK_TIME_MINUTES, TimeUnit.MINUTES);
+            }
+
+            // Kiểm tra nếu đã chạm ngưỡng 5 lần nhập sai
+            if (failedAttempts != null && failedAttempts >= MAX_FAILED_ATTEMPTS) {
+                // Tạo key khóa tài khoản trong 10 phút
+                redisTemplate.opsForValue().set(lockKey, "LOCKED", LOCK_TIME_MINUTES, TimeUnit.MINUTES);
+                // Xóa key đếm thất bại
+                redisTemplate.delete(attemptsKey);
+
+                throw new AppException(ErrorCode.ACCOUNT_LOCKED,
+                        String.format("Bạn đã nhập sai quá %d lần. Tài khoản tạm thời bị khóa %d phút!", MAX_FAILED_ATTEMPTS, LOCK_TIME_MINUTES));
+            }
+
+            long remainingAttempts = MAX_FAILED_ATTEMPTS - (failedAttempts != null ? failedAttempts : 0);
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS,
+                    String.format("Email hoặc mật khẩu không chính xác. Bạn còn %d lần thử!", remainingAttempts));
         }
 
-        // 4. Đăng nhập thành công -> Xóa key đếm thất bại trên Redis (nếu có)
+        // 4. Đăng nhập thành công -> Xóa bộ đếm thất bại trên Redis
         redisTemplate.delete(attemptsKey);
 
-        //  Sinh Access Token & Refresh Token
+        // 5. Sinh Access Token & Refresh Token
         String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
         RefreshTokenEntity refreshToken = refreshTokenService.createRefreshToken(user.getId());
 

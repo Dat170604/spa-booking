@@ -24,7 +24,15 @@ export class AppointmentService {
     return this.http.post<any>(this.API_URL, request);
   }
 
+  getAllAppointments(): Observable<any[]> {
+    return this.http.get<any[]>(this.API_URL);
+  }
+
   getMyAppointments(): Observable<any[]> {
     return this.http.get<any[]>(`${this.API_URL}/my-appointments`);
+  }
+
+  updateStatus(id: number, status: string): Observable<any> {
+    return this.http.patch<any>(`${this.API_URL}/${id}/status`, { status });
   }
 }

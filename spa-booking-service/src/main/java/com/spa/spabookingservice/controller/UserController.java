@@ -1,9 +1,6 @@
 package com.spa.spabookingservice.controller;
 
-import com.spa.spabookingservice.dto.user.StaffCreateRequest;
-import com.spa.spabookingservice.dto.user.UpdateUserRolesRequest;
-import com.spa.spabookingservice.dto.user.UserResponse;
-import com.spa.spabookingservice.dto.user.UserUpdateRequest;
+import com.spa.spabookingservice.dto.user.*;
 import com.spa.spabookingservice.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +37,7 @@ public class UserController {
             @RequestParam(required = false) String role,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "id") String sortBy, // Đã sửa từ "createdAt" thành "id"
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
         Sort sort = sortDir.equalsIgnoreCase("desc")
@@ -82,6 +79,15 @@ public class UserController {
             @Valid @RequestBody UpdateUserRolesRequest request
     ) {
         return ResponseEntity.ok(userService.updateUserRoles(id, request));
+    }
+
+    @PatchMapping("/{id}/branch")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> updateUserBranch(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserBranchRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateUserBranch(id, request.getBranchId()));
     }
 
     @PatchMapping("/{id}/toggle-status")

@@ -5,9 +5,11 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.core.PropertyReferenceException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -18,6 +20,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.spa.spabookingservice.dto.common.ErrorResponse;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -83,9 +87,23 @@ public class GlobalExceptionHandler {
         return build(ErrorCode.INTERNAL_ERROR, ErrorCode.INTERNAL_ERROR.getDefaultMessage(), request, null);
     }
 
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<ErrorResponse> handleLockedException(LockedException ex, HttpServletRequest request) {
+        ErrorResponse error = ErrorResponse.builder()
+                .status(HttpStatus.FORBIDDEN.value()) // 403 Forbidden
+                .code("ACCOUNT_LOCKED")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(Instant.from(LocalDateTime.now()))
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
     private ResponseEntity<ErrorResponse> build(ErrorCode code, String message, HttpServletRequest request,
                                                 Map<String, String> fieldErrors) {
         return ResponseEntity.status(code.getStatus())
                 .body(ErrorResponse.of(code, message, request.getRequestURI(), fieldErrors));
     }
+
+
 }

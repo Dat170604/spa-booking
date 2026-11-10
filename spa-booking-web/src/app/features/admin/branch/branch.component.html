@@ -1,0 +1,54 @@
+<div class="p-6 space-y-6 bg-slate-900 text-slate-100 min-h-screen">
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold">🏢 Quản Lý Chi Nhánh</h1>
+      <p class="text-slate-400 text-sm">Danh sách các cơ sở thuộc hệ thống Spa</p>
+    </div>
+    <button (click)="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition">
+      + Thêm Chi Nhánh Mới
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div *ngFor="let b of branches" class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl flex flex-col justify-between">
+      <div class="space-y-3">
+        <div class="flex justify-between items-start">
+          <h3 class="font-bold text-lg text-white">{{ b.name }}</h3>
+          <span [class]="b.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'" class="px-2.5 py-0.5 rounded-full text-xs font-semibold">
+            {{ b.active ? 'Hoạt động' : 'Tạm đóng' }}
+          </span>
+        </div>
+        <p class="text-xs text-slate-400">📍 {{ b.address }}</p>
+        <p class="text-xs text-slate-400">📞 {{ b.phone }}</p>
+        <p class="text-xs text-emerald-400">🕒 {{ b.openTime }} - {{ b.closeTime }}</p>
+      </div>
+
+      <div class="pt-4 border-t border-slate-700/50 flex gap-2 mt-4">
+        <button (click)="openModal(b)" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-xl text-xs font-semibold">Chỉnh sửa</button>
+        <button (click)="toggleStatus(b.id)" class="px-3 py-2 bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white rounded-xl text-xs">Đổi trạng thái</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Form -->
+  <div *ngIf="isModalOpen" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg p-6 rounded-2xl space-y-4">
+      <h3 class="text-xl font-bold">{{ isEdit ? 'Sửa Chi Nhánh' : 'Thêm Chi Nhánh' }}</h3>
+      <form [formGroup]="branchForm" (ngSubmit)="saveBranch()" class="space-y-3">
+        <input formControlName="name" placeholder="Tên chi nhánh" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500" />
+        <input formControlName="address" placeholder="Địa chỉ" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500" />
+        <input formControlName="phone" placeholder="Số điện thoại" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500" />
+
+        <div class="grid grid-cols-2 gap-3">
+          <input type="time" formControlName="openTime" class="bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none" />
+          <input type="time" formControlName="closeTime" class="bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none" />
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" (click)="closeModal()" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-xl text-sm">Hủy</button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-sm">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

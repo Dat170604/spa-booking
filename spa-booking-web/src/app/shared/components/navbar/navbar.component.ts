@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -10,7 +10,7 @@ import { UserResponse } from '../../../core/models/user.model';
   standalone: true,
   imports: [CommonModule, RouterModule], // Khai báo đầy đủ để ăn *ngIf và routerLink
   templateUrl: './navbar.component.html',
-  styleUrls: ['./navbar.component.scss']
+  styleUrls: ['./navbar.component.scss'],
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   isLoggedIn = false;
@@ -23,10 +23,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   private authSubscription!: Subscription;
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
-    this.authSubscription = this.authService.currentUser$.subscribe(user => {
+    this.authSubscription = this.authService.currentUser$.subscribe((user) => {
       this.currentUser = user;
       this.isLoggedIn = !!user;
       if (user && user.roles) {
@@ -36,6 +39,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.isAdmin = false;
         this.isStaff = false;
       }
+      this.cdr.detectChanges();
     });
   }
 

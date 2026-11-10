@@ -17,6 +17,8 @@ public interface UserService {
 
     UserResponse updateUserRoles(Long id, UpdateUserRolesRequest request);
 
+    UserResponse updateUserBranch(Long userId, Long branchId);
+
     UserResponse getUserById(Long id);
 
     Page<UserResponse> searchUsers(String keyword, String roleName, Pageable pageable);

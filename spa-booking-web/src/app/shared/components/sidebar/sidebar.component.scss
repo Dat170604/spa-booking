@@ -1,34 +1,46 @@
-:host {
-  display: block;
+.sidebar {
+  /* Tối ưu hiệu ứng cuộn mượt */
+  user-select: none;
+
+  .nav-item {
+    color: #94a3b8; // slate-400
+
+    svg {
+      color: #64748b; // slate-500
+    }
+
+    &:hover {
+      svg {
+        color: #34d399; // emerald-400
+      }
+    }
+
+    /* Style cho Tab đang được chọn (Active) */
+    &.active-link {
+      background-color: rgba(16, 185, 129, 0.12); // emerald-500 với opacity
+      color: #34d399; // emerald-400
+      font-weight: 600;
+      border-left: 3px solid #10b981;
+
+      svg {
+        color: #34d399;
+      }
+    }
+  }
 }
 
-aside {
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Style active route cho Sidebar */
-  a.router-link-active {
-    position: relative;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 20%;
-      height: 60%;
-      width: 4px;
-      background-color: #10b981; /* emerald-500 */
-      border-radius: 0 4px 4px 0;
-    }
+/* Hiệu ứng Fade In cho Text khi mở rộng Sidebar */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
   }
-
-  /* Tuỳ chỉnh Scrollbar cho Sidebar khi danh sách menu dài */
-  nav {
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 2px;
-    }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in-out forwards;
 }

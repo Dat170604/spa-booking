@@ -29,18 +29,22 @@ export const routes: Routes = [
   },
   {
     path: 'branches',
-    loadComponent: () => import('./features/branches/branch-list.component').then(m => m.BranchListComponent)
+    loadComponent: () =>
+      import('./features/branches/branch-list.component').then((m) => m.BranchListComponent),
   },
   {
     path: 'services',
-    loadComponent: () => import('./features/services-list/services-list.component').then(m => m.ServicesListComponent)
+    loadComponent: () =>
+      import('./features/services-list/services-list.component').then(
+        (m) => m.ServicesListComponent,
+      ),
   },
 
   // Trang Quản trị ADMIN (Yêu cầu đăng nhập & Role ADMIN/STAFF)
   {
     path: 'admin',
     loadComponent: () =>
-      import('./features/admin/admin-layout.component').then((m) => m.AdminLayoutComponent),
+      import('./features/admin/layout/layout.component').then((m) => m.LayoutComponent),
     canActivate: [adminGuard],
     children: [
       {
@@ -53,6 +57,41 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent,
+          ),
+      },
+      {
+        path: 'appointments',
+        loadComponent: () =>
+          import('./features/admin/appointment/appointment.component').then(
+            (m) => m.AppointmentManagementComponent,
+          ),
+      },
+      {
+        path: 'branches',
+        loadComponent: () =>
+          import('./features/admin/branch/branch.component').then(
+            (m) => m.BranchManagementComponent,
+          ),
+      },
+      {
+        path: 'services',
+        loadComponent: () =>
+          import('./features/admin/service/service.component').then(
+            (m) => m.ServiceManagementComponent,
+          ),
+      },
+      {
+        path: 'customers',
+        loadComponent: () =>
+          import('./features/admin/customer/customer.component').then(
+            (m) => m.CustomerManagementComponent,
+          ),
+      },
+      {
+        path: 'staff',
+        loadComponent: () =>
+          import('./features/admin/staff/staff.component').then(
+            (m) => m.StaffManagementComponent,
           ),
       },
     ],

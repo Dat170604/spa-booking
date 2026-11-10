@@ -15,7 +15,7 @@ export class SidebarComponent implements OnInit {
   isCollapsed = false;
   userRoles: string[] = [];
 
-  // Danh sách các menu quản trị
+  // Danh sách các menu quản trị (Đã tách Khách hàng và Nhân viên)
   menuItems: NavItem[] = [
     {
       label: 'Tổng quan',
@@ -42,9 +42,15 @@ export class SidebarComponent implements OnInit {
       roles: ['ROLE_ADMIN'],
     },
     {
-      label: 'Quản lý Người dùng',
-      icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-      route: '/admin/users',
+      label: 'Quản lý Khách hàng',
+      icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+      route: '/admin/customers',
+      roles: ['ROLE_ADMIN', 'ROLE_STAFF'],
+    },
+    {
+      label: 'Quản lý Nhân viên',
+      icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+      route: '/admin/staff',
       roles: ['ROLE_ADMIN'],
     },
   ];

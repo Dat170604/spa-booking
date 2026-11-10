@@ -1,5 +1,6 @@
 package com.spa.spabookingservice.dto.common;
 
+import lombok.Builder;
 import org.slf4j.MDC;
 import com.spa.spabookingservice.exception.ErrorCode;
 import com.spa.spabookingservice.util.TraceIdFilter;
@@ -13,6 +14,8 @@ import java.util.Map;
  * { "status", "code", "message", "path", "timestamp", "traceId", "errors": [ { "field", "message" } ] }
  * errors luôn có mặt (rỗng nếu không có lỗi theo trường).
  */
+
+@Builder
 public record ErrorResponse(
         int status,
         String code,

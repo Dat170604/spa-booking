@@ -4,9 +4,10 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthResponse, LoginRequest, RefreshTokenRequest, RegisterRequest } from '../models/auth.model';
 import { TokenService } from './token.service';
+import { Router } from '@angular/router';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
   private readonly API_URL = `${environment.apiUrl}/auth`;
@@ -16,22 +17,22 @@ export class AuthService {
 
   constructor(
     private http: HttpClient,
-    private tokenService: TokenService
+    private tokenService: TokenService,
+    private router: Router,
   ) {
     this.currentUserSubject = new BehaviorSubject<any>(this.tokenService.getUserInfo());
     this.currentUser$ = this.currentUserSubject.asObservable();
   }
-
   public register(request: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/register`, request).pipe(
-      tap((response) => this.handleAuthSuccess(response))
-    );
+    return this.http
+      .post<AuthResponse>(`${this.API_URL}/register`, request)
+      .pipe(tap((response) => this.handleAuthSuccess(response)));
   }
 
   public login(request: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/login`, request).pipe(
-      tap((response) => this.handleAuthSuccess(response))
-    );
+    return this.http
+      .post<AuthResponse>(`${this.API_URL}/login`, request)
+      .pipe(tap((response) => this.handleAuthSuccess(response)));
   }
 
   public refreshToken(refreshToken: string): Observable<AuthResponse> {
@@ -39,13 +40,14 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.API_URL}/refresh-token`, request).pipe(
       tap((response) => {
         this.tokenService.saveTokens(response.accessToken, response.refreshToken);
-      })
+      }),
     );
   }
 
   public logout(): void {
     this.tokenService.clearStorage();
     this.currentUserSubject.next(null);
+    this.router.navigate(['/']);
   }
 
   public isLoggedIn(): boolean {
@@ -58,10 +60,9 @@ export class AuthService {
       id: response.userId,
       fullName: response.fullName,
       email: response.email,
-      roles: response.roles
+      roles: response.roles,
     };
     this.tokenService.saveUserInfo(userInfo);
     this.currentUserSubject.next(userInfo);
   }
-
 }

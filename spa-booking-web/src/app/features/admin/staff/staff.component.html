@@ -1,0 +1,195 @@
+<div class="p-6 space-y-6">
+  <!-- Header & Button Thêm Nhân Viên -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-white">Quản lý Nhân viên</h1>
+      <p class="text-sm text-slate-400">Quản lý danh sách nhân viên, gán chi nhánh và phân quyền hệ thống</p>
+    </div>
+    <button
+      (click)="openCreateModal()"
+      class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-2 text-sm shadow-lg shadow-emerald-900/20">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+      </svg>
+      Thêm Nhân Viên
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex justify-center py-12">
+    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
+  </div>
+
+  <!-- Bảng dữ liệu Nhân viên -->
+  <div *ngIf="!isLoading" class="bg-slate-800/80 border border-slate-700/80 rounded-2xl overflow-hidden shadow-xl">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-slate-300 text-sm">
+        <thead class="bg-slate-900/50 border-b border-slate-700/80 uppercase text-xs font-semibold text-slate-400">
+        <tr>
+          <th class="px-6 py-4">Họ và tên</th>
+          <th class="px-6 py-4">Email / Số điện thoại</th>
+          <th class="px-6 py-4">Chi nhánh làm việc</th>
+          <th class="px-6 py-4">Vai trò (Role)</th>
+          <th class="px-6 py-4">Trạng thái</th>
+          <th class="px-6 py-4 text-center">Thao tác</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700/60">
+        <tr *ngFor="let staff of staffList" class="hover:bg-slate-700/30 transition">
+          <td class="px-6 py-4 font-medium text-white">{{ staff.fullName }}</td>
+          <td class="px-6 py-4">
+            <div class="text-white">{{ staff.email }}</div>
+            <div class="text-xs text-slate-400">{{ staff.phone || '---' }}</div>
+          </td>
+          <td class="px-6 py-4 font-medium text-emerald-400">
+            {{ staff.branchName || staff.branch?.name || 'Chưa gán chi nhánh' }}
+          </td>
+          <td class="px-6 py-4">
+            <ng-container *ngFor="let r of staff.roles">
+              <!-- Bỏ qua ROLE_CUSTOMER, chỉ hiển thị ROLE_STAFF và ROLE_ADMIN -->
+              <span *ngIf="r !== 'ROLE_CUSTOMER'"
+                    [ngClass]="{
+                      'bg-purple-500/20 text-purple-300 border-purple-500/30': r === 'ROLE_ADMIN',
+                      'bg-blue-500/20 text-blue-300 border-blue-500/30': r === 'ROLE_STAFF'
+                    }"
+                    class="inline-block px-2.5 py-1 text-xs rounded-lg border font-medium mr-1">
+                {{ r === 'ROLE_ADMIN' ? 'Quản trị viên' : 'Nhân viên' }}
+              </span>
+            </ng-container>
+          </td>
+          <td class="px-6 py-4">
+              <span [ngClass]="{
+                'bg-emerald-500/10 text-emerald-400 border-emerald-500/30': staff.status === 'ACTIVE',
+                'bg-red-500/10 text-red-400 border-red-500/30': staff.status !== 'ACTIVE'
+              }" class="px-3 py-1 text-xs rounded-full border font-medium">
+                {{ staff.status === 'ACTIVE' ? 'Đang làm việc' : 'Bị khóa' }}
+              </span>
+          </td>
+          <td class="px-6 py-4 text-center space-x-2">
+            <button
+              (click)="openEditModal(staff)"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 transition">
+              Cập nhật
+            </button>
+            <button
+              (click)="toggleStatus(staff.id)"
+              [class]="staff.status === 'ACTIVE' ? 'text-red-400 border-red-500/40 hover:bg-red-500/10' : 'text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10'"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition">
+              {{ staff.status === 'ACTIVE' ? 'Khóa' : 'Kích hoạt' }}
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="staffList.length === 0">
+          <td colspan="6" class="px-6 py-8 text-center text-slate-400">Chưa có dữ liệu nhân viên</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODAL 1: THÊM MỚI NHÂN VIÊN -->
+  <div *ngIf="isCreateModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-4">
+        <h3 class="text-lg font-bold text-white">Thêm Nhân Viên Mới</h3>
+        <button (click)="closeCreateModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form [formGroup]="createForm" (ngSubmit)="submitCreate()" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Họ và tên</label>
+          <input type="text" formControlName="fullName" placeholder="Nguyễn Văn A"
+                 class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <small *ngIf="cf['fullName'].touched && cf['fullName'].errors?.['required']" class="text-red-400 text-xs">Vui lòng nhập họ tên</small>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Chi nhánh làm việc</label>
+          <select formControlName="branchId"
+                  class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-500">
+            <option value="" disabled selected>-- Chọn Chi Nhánh --</option>
+            <option *ngFor="let branch of branches" [value]="branch.id">
+              {{ branch.name }} - {{ branch.address }}
+            </option>
+          </select>
+          <small *ngIf="cf['branchId'].touched && cf['branchId'].errors?.['required']" class="text-red-400 text-xs">Vui lòng chọn chi nhánh</small>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Email</label>
+          <input type="email" formControlName="email" placeholder="staff@spa.com"
+                 class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <small *ngIf="cf['email'].touched && cf['email'].errors?.['required']" class="text-red-400 text-xs">Vui lòng nhập email</small>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Số điện thoại</label>
+          <input type="text" formControlName="phone" placeholder="0987654321"
+                 class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <small *ngIf="cf['phone'].touched && cf['phone'].errors" class="text-red-400 text-xs">Số điện thoại phải gồm 10 chữ số</small>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Mật khẩu khởi tạo</label>
+          <input type="password" formControlName="password" placeholder="••••••••"
+                 class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-500" />
+          <small *ngIf="cf['password'].touched && cf['password'].errors?.['minlength']" class="text-red-400 text-xs">Mật khẩu tối thiểu 6 ký tự</small>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-700/80">
+          <button type="button" (click)="closeCreateModal()" class="px-4 py-2.5 rounded-xl border border-slate-600 text-slate-300 text-sm font-semibold hover:bg-slate-700">Hủy</button>
+          <button type="submit" class="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500">Tạo Mới</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: CẬP NHẬT THÔNG TIN / ROLE / BRANCH -->
+  <div *ngIf="isEditModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-700/80 pb-4">
+        <h3 class="text-lg font-bold text-white">Cập Nhật Nhân Viên</h3>
+        <button (click)="closeEditModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form [formGroup]="editForm" (ngSubmit)="submitEdit()" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Họ và tên</label>
+          <input type="text" formControlName="fullName"
+                 class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Số điện thoại</label>
+          <input type="text" formControlName="phone"
+                 class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Chi nhánh làm việc</label>
+          <select formControlName="branchId"
+                  class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500">
+            <option value="" disabled>-- Chọn Chi Nhánh --</option>
+            <option *ngFor="let branch of branches" [value]="branch.id">
+              {{ branch.name }}
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Quyền hệ thống (Role)</label>
+          <select formControlName="role"
+                  class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500">
+            <option value="ROLE_STAFF">Nhân viên (ROLE_STAFF)</option>
+            <option value="ROLE_ADMIN">Quản trị viên (ROLE_ADMIN)</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-700/80">
+          <button type="button" (click)="closeEditModal()" class="px-4 py-2.5 rounded-xl border border-slate-600 text-slate-300 text-sm font-semibold hover:bg-slate-700">Hủy</button>
+          <button type="submit" class="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-500">Lưu Thay Đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

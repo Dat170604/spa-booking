@@ -19,11 +19,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     List<UserEntity> findActiveStaffByBranchId(@Param("branchId") Long branchId);
 
     @Query("SELECT DISTINCT u FROM UserEntity u LEFT JOIN u.roles r WHERE " +
-            "(:keyword IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "(:keyword IS NULL OR :keyword = '' OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR u.phone LIKE CONCAT('%', :keyword, '%')) " +
-            "AND (:roleName IS NULL OR r.name = :roleName)")
+            "AND (:roleName IS NULL OR :roleName = '' OR r.name = :roleName)")
     Page<UserEntity> searchUsers(@Param("keyword") String keyword, @Param("roleName") String roleName, Pageable pageable);
-
-
 }
