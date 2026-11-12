@@ -1,0 +1,95 @@
+<div class="min-h-screen bg-slate-950 text-slate-200">
+
+  <div class="max-w-7xl mx-auto px-6 py-12 space-y-8">
+    <!-- Tiêu đề & Ô tìm kiếm -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">Bảng Giá & Liệu Trình Dịch Vụ</h1>
+        <p class="text-slate-400 mt-1">Lựa chọn liệu trình chăm sóc sức khỏe và sắc đẹp phù hợp với bạn</p>
+      </div>
+
+      <div class="relative w-full md:w-80">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
+        <input
+          type="text"
+          [value]="searchKeyword"
+          (input)="onSearchInput($event)"
+          placeholder="Tìm kiếm liệu trình..."
+          class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-emerald-500 transition"
+        />
+      </div>
+    </div>
+
+    <!-- Thanh lọc nhanh theo danh mục (Tabs) -->
+    <div class="flex flex-wrap gap-2">
+      <button
+        *ngFor="let cat of categories"
+        (click)="selectCategory(cat.value)"
+        [ngClass]="selectedCategory === cat.value
+          ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-900/30'
+          : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-600'"
+        class="px-4 py-2 rounded-xl text-xs font-semibold border transition"
+      >
+        {{ cat.label }}
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="isLoading" class="flex justify-center py-16">
+      <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
+    </div>
+
+    <!-- Danh sách thẻ dịch vụ -->
+    <div *ngIf="!isLoading && services.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        *ngFor="let item of services"
+        class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition group flex flex-col justify-between"
+      >
+        <div>
+          <div class="h-52 relative overflow-hidden bg-slate-800">
+            <img
+              [src]="item.imageUrl || 'https://placehold.co/600x400/1e293b/34d399?text=Serenity+Spa'"
+              [alt]="item.name"
+              class="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+            />
+            <span class="absolute top-3 left-3 px-3 py-1 rounded-lg bg-slate-950/80 backdrop-blur-sm text-xs font-medium text-slate-200 border border-slate-700">
+              {{ getCategoryLabel(item.category) }}
+            </span>
+            <span class="absolute top-3 right-3 px-3 py-1 rounded-lg bg-slate-950/80 backdrop-blur-sm text-xs font-mono text-emerald-400 border border-slate-700">
+              {{ item.durationMinutes }} phút
+            </span>
+          </div>
+
+          <div class="p-6 space-y-2">
+            <h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition">{{ item.name }}</h3>
+            <p class="text-sm text-slate-400 line-clamp-3">
+              {{ item.description || 'Trải nghiệm liệu trình thư giãn chuyên sâu giúp giải tỏa căng thẳng và phục hồi năng lượng.' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="px-6 pb-6 pt-3 flex items-center justify-between border-t border-slate-800/80">
+          <div>
+            <span class="text-xs text-slate-400 block">Chi phí trọn gói</span>
+            <span class="text-lg font-bold text-emerald-400">{{ item.price | number:'1.0-0' }} đ</span>
+          </div>
+          <button
+            (click)="bookService(item.id)"
+            class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-md"
+          >
+            Đặt lịch ngay
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trạng thái trống -->
+    <div *ngIf="!isLoading && services.length === 0" class="text-center py-16 bg-slate-900/50 border border-slate-800 rounded-2xl">
+      <p class="text-slate-400">Không tìm thấy dịch vụ nào phù hợp với từ khóa của bạn.</p>
+    </div>
+  </div>
+</div>

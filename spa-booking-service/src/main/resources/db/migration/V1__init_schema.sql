@@ -55,6 +55,8 @@ CREATE TABLE refresh_tokens (
 CREATE TABLE services (
                           id BIGSERIAL PRIMARY KEY,
                           name VARCHAR(150) NOT NULL,
+                          category VARCHAR(50),
+                          image_url VARCHAR(500),
                           description TEXT,
                           price NUMERIC(12, 2) NOT NULL,
                           duration_minutes INT NOT NULL, -- Thời lượng dịch vụ (phút)

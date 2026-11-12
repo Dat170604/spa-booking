@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { BranchService } from '../../core/services/branch.service';
 
 @Component({
@@ -12,26 +12,56 @@ import { BranchService } from '../../core/services/branch.service';
 })
 export class BranchListComponent implements OnInit {
   branches: any[] = [];
+  filteredBranches: any[] = [];
+  searchKeyword = '';
   isLoading = true;
-  errorMessage = '';
 
-  constructor(private branchService: BranchService) {}
+  constructor(
+    private branchService: BranchService,
+    private router: Router,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit(): void {
-    this.loadActiveBranches();
+    this.loadBranches();
   }
 
-  loadActiveBranches(): void {
+  loadBranches(): void {
     this.isLoading = true;
     this.branchService.getActiveBranches().subscribe({
-      next: (data) => {
-        this.branches = data;
+      next: (res: any) => {
+        this.branches = res?.content || (Array.isArray(res) ? res : []);
+        this.filteredBranches = [...this.branches];
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
-      error: (err) => {
-        this.errorMessage = 'Không thể tải danh sách chi nhánh. Vui lòng thử lại sau!';
+      error: () => {
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
     });
+  }
+
+  onSearch(event: Event): void {
+    const keyword = (event.target as HTMLInputElement).value.toLowerCase().trim();
+    this.searchKeyword = keyword;
+    if (!keyword) {
+      this.filteredBranches = [...this.branches];
+      return;
+    }
+    this.filteredBranches = this.branches.filter(
+      (b) => b.name?.toLowerCase().includes(keyword) || b.address?.toLowerCase().includes(keyword),
+    );
+  }
+
+  bookAtBranch(branchId: number): void {
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    if (!token) {
+      this.router.navigate(['/login'], {
+        queryParams: { returnUrl: '/booking', branchId },
+      });
+    } else {
+      this.router.navigate(['/booking'], { queryParams: { branchId } });
+    }
   }
 }

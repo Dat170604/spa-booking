@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/services/**").permitAll()
                         .requestMatchers("/api/v1/branches/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/uploads/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(restAuthHandlers.entryPoint())

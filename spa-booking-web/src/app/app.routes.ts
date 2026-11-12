@@ -35,7 +35,7 @@ export const routes: Routes = [
   {
     path: 'services',
     loadComponent: () =>
-      import('./features/services-list/services-list.component').then(
+      import('./features/services/services-list.component').then(
         (m) => m.ServicesListComponent,
       ),
   },
@@ -90,8 +90,13 @@ export const routes: Routes = [
       {
         path: 'staff',
         loadComponent: () =>
-          import('./features/admin/staff/staff.component').then(
-            (m) => m.StaffManagementComponent,
+          import('./features/admin/staff/staff.component').then((m) => m.StaffManagementComponent),
+      },
+      {
+        path: 'services',
+        loadComponent: () =>
+          import('./features/admin/service/service.component').then(
+            (m) => m.ServiceManagementComponent,
           ),
       },
     ],

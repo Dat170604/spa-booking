@@ -55,7 +55,7 @@ export class BookingComponent implements OnInit {
       error: () => (this.branches = []),
     });
 
-    this.spaService.getAllServices().subscribe({
+    this.spaService.getServices().subscribe({
       next: (res) => {
         this.services = res;
         this.isLoading = false;

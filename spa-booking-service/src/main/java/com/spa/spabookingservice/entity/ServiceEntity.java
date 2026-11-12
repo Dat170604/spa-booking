@@ -23,6 +23,12 @@ public class ServiceEntity {
     @Column(nullable = false, length = 150)
     private String name;
 
+    @Column(length = 50)
+    private String category; // Thêm danh mục (MASSAGE, SKINCARE, BODY_CARE, HAIR_NAIL, COMBO)
+
+    @Column(name = "image_url", length = 500)
+    private String imageUrl; // Thêm đường dẫn hình ảnh
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

@@ -12,8 +12,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -119,5 +126,31 @@ public class BranchServiceImpl implements BranchService {
                 .closeTime(entity.getCloseTime())
                 .active(entity.isActive())
                 .build();
+    }
+
+    @Override
+    public String uploadBranchImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File ảnh chi nhánh không được để trống!");
+        }
+        try {
+            Path uploadPath = Paths.get("uploads/branches");
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            String extension = originalFilename != null && originalFilename.contains(".")
+                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                    : ".jpg";
+            String fileName = UUID.randomUUID() + extension;
+
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            return "http://localhost:8080/uploads/branches/" + fileName;
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi lưu file ảnh chi nhánh: " + e.getMessage(), e);
+        }
     }
 }

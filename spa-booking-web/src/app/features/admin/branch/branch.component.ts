@@ -17,10 +17,14 @@ export class BranchManagementComponent implements OnInit {
   selectedBranchId: number | null = null;
   isLoading = false;
 
+  // Biến phục vụ upload & xem trước ảnh
+  imagePreview: string | null = null;
+  isUploadingImage = false;
+
   constructor(
     private branchService: BranchService,
     private fb: FormBuilder,
-    private cdr: ChangeDetectorRef, // 1. Inject ChangeDetectorRef vào constructor
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -34,6 +38,7 @@ export class BranchManagementComponent implements OnInit {
       address: ['', Validators.required],
       phone: ['', Validators.required],
       email: [''],
+      imageUrl: [''],
       description: [''],
       openTime: ['08:00', Validators.required],
       closeTime: ['21:00', Validators.required],
@@ -43,11 +48,8 @@ export class BranchManagementComponent implements OnInit {
 
   loadBranches(): void {
     this.isLoading = true;
-
-    // Gọi API tìm kiếm / lấy danh sách chi nhánh
-    this.branchService.searchBranches('', 0, 10).subscribe({
+    this.branchService.searchBranches('', 0, 50).subscribe({
       next: (res) => {
-        // 2. Kiểm tra nếu kết quả là đối tượng Page của Spring Boot thì lấy res.content, nếu là Array thì lấy trực tiếp res
         if (res && res.content) {
           this.branches = res.content;
         } else if (Array.isArray(res)) {
@@ -55,10 +57,7 @@ export class BranchManagementComponent implements OnInit {
         } else {
           this.branches = [];
         }
-
         this.isLoading = false;
-
-        // 3. BẮT BUỘC: Ép Angular cập nhật UI ngay lập tức mà không cần tương tác Modal
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -74,20 +73,58 @@ export class BranchManagementComponent implements OnInit {
     if (branch) {
       this.isEdit = true;
       this.selectedBranchId = branch.id;
+      this.imagePreview = branch.imageUrl || null;
       this.branchForm.patchValue(branch);
     } else {
       this.isEdit = false;
       this.selectedBranchId = null;
-      this.branchForm.reset({ openTime: '08:00', closeTime: '21:00', active: true });
+      this.imagePreview = null;
+      this.branchForm.reset({ openTime: '08:00', closeTime: '21:00', active: true, imageUrl: '' });
     }
   }
 
   closeModal(): void {
     this.isModalOpen = false;
+    this.imagePreview = null;
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.imagePreview = reader.result as string;
+      this.cdr.detectChanges();
+    };
+    reader.readAsDataURL(file);
+
+    this.isUploadingImage = true;
+    this.branchService.uploadImage(file).subscribe({
+      next: (res) => {
+        this.branchForm.patchValue({ imageUrl: res.imageUrl });
+        this.imagePreview = res.imageUrl;
+        this.isUploadingImage = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Lỗi upload ảnh chi nhánh:', err);
+        alert('Upload ảnh thất bại, vui lòng thử lại!');
+        this.isUploadingImage = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  removeImage(): void {
+    this.imagePreview = null;
+    this.branchForm.patchValue({ imageUrl: '' });
   }
 
   saveBranch(): void {
-    if (this.branchForm.invalid) return;
+    if (this.branchForm.invalid || this.isUploadingImage) return;
 
     const body = this.branchForm.value;
 
@@ -111,6 +148,23 @@ export class BranchManagementComponent implements OnInit {
   toggleStatus(id: number): void {
     this.branchService.toggleBranchStatus(id).subscribe({
       next: () => this.loadBranches(),
+    });
+  }
+
+  deleteBranch(branch: any): void {
+    const confirmed = confirm(`Bạn có chắc chắn muốn xóa chi nhánh "${branch.name}" không?`);
+    if (!confirmed) return;
+
+    this.branchService.deleteBranch(branch.id).subscribe({
+      next: () => {
+        this.loadBranches();
+      },
+      error: (err) => {
+        console.error('Lỗi khi xóa chi nhánh:', err);
+        alert(
+          'Không thể xóa chi nhánh này (có thể chi nhánh đang có lịch hẹn hoặc nhân viên trực thuộc).',
+        );
+      },
     });
   }
 }

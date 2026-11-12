@@ -20,7 +20,13 @@ export class BranchService {
   }
 
   // Tìm kiếm & phân trang (Admin)
-  searchBranches(keyword: string = '', page = 0, size = 10, sortBy = 'id', sortDir = 'asc'): Observable<any> {
+  searchBranches(
+    keyword: string = '',
+    page = 0,
+    size = 10,
+    sortBy = 'id',
+    sortDir = 'asc',
+  ): Observable<any> {
     let params = new HttpParams()
       .set('keyword', keyword) // Truyền chuỗi rỗng thay vì để null
       .set('page', page)
@@ -49,5 +55,11 @@ export class BranchService {
   // Xóa chi nhánh (Admin)
   deleteBranch(id: number): Observable<void> {
     return this.http.delete<void>(`${this.API_URL}/${id}`);
+  }
+
+  uploadImage(file: File): Observable<{ imageUrl: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ imageUrl: string }>(`${this.API_URL}/upload-image`, formData);
   }
 }

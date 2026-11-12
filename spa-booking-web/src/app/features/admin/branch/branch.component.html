@@ -9,44 +9,182 @@
     </button>
   </div>
 
+  <!-- Danh sách thẻ chi nhánh -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <div *ngFor="let b of branches" class="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl flex flex-col justify-between">
-      <div class="space-y-3">
-        <div class="flex justify-between items-start">
-          <h3 class="font-bold text-lg text-white">{{ b.name }}</h3>
-          <span [class]="b.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'" class="px-2.5 py-0.5 rounded-full text-xs font-semibold">
+    <div *ngFor="let b of branches" class="bg-slate-800/80 border border-slate-700 rounded-2xl overflow-hidden flex flex-col justify-between">
+      <div>
+        <!-- Ảnh đại diện chi nhánh -->
+        <div class="h-44 w-full bg-slate-900 relative overflow-hidden">
+          <img
+            [src]="b.imageUrl || 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&w=800&q=80'"
+            [alt]="b.name"
+            class="w-full h-full object-cover"
+          />
+          <span
+            [class]="b.active ? 'bg-emerald-500/90 text-white' : 'bg-red-500/90 text-white'"
+            class="absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold shadow"
+          >
             {{ b.active ? 'Hoạt động' : 'Tạm đóng' }}
           </span>
         </div>
-        <p class="text-xs text-slate-400">📍 {{ b.address }}</p>
-        <p class="text-xs text-slate-400">📞 {{ b.phone }}</p>
-        <p class="text-xs text-emerald-400">🕒 {{ b.openTime }} - {{ b.closeTime }}</p>
+
+        <!-- Thông tin chi tiết -->
+        <div class="p-6 space-y-2.5">
+          <h3 class="font-bold text-lg text-white">{{ b.name }}</h3>
+          <p class="text-xs text-slate-300">📍 {{ b.address }}</p>
+          <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+            <span>📞 {{ b.phone }}</span>
+            <span *ngIf="b.email">✉️ {{ b.email }}</span>
+          </div>
+          <p class="text-xs text-emerald-400 font-medium">🕒 {{ b.openTime }} - {{ b.closeTime }}</p>
+
+          <!-- Hiển thị mô tả chi nhánh -->
+          <p *ngIf="b.description" class="text-xs text-slate-400 pt-2 border-t border-slate-700/50 line-clamp-2 italic">
+            "{{ b.description }}"
+          </p>
+        </div>
       </div>
 
-      <div class="pt-4 border-t border-slate-700/50 flex gap-2 mt-4">
-        <button (click)="openModal(b)" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-xl text-xs font-semibold">Chỉnh sửa</button>
-        <button (click)="toggleStatus(b.id)" class="px-3 py-2 bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white rounded-xl text-xs">Đổi trạng thái</button>
+      <!-- Các nút thao tác -->
+      <div class="px-6 pb-6 pt-4 border-t border-slate-700/50 flex items-center gap-2">
+        <button
+          (click)="openModal(b)"
+          class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-xl text-xs font-semibold transition"
+        >
+          Chỉnh sửa
+        </button>
+        <button
+          (click)="toggleStatus(b.id)"
+          class="px-3 py-2 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white rounded-xl text-xs font-medium transition"
+        >
+          {{ b.active ? 'Tạm đóng' : 'Mở lại' }}
+        </button>
+        <button
+          (click)="deleteBranch(b)"
+          class="px-3 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-xl text-xs font-medium transition"
+          title="Xóa chi nhánh"
+        >
+          Xóa
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Modal Form -->
-  <div *ngIf="isModalOpen" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg p-6 rounded-2xl space-y-4">
-      <h3 class="text-xl font-bold">{{ isEdit ? 'Sửa Chi Nhánh' : 'Thêm Chi Nhánh' }}</h3>
-      <form [formGroup]="branchForm" (ngSubmit)="saveBranch()" class="space-y-3">
-        <input formControlName="name" placeholder="Tên chi nhánh" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500" />
-        <input formControlName="address" placeholder="Địa chỉ" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500" />
-        <input formControlName="phone" placeholder="Số điện thoại" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500" />
+  <!-- Modal Form Thêm / Sửa Chi Nhánh -->
+  <div *ngIf="isModalOpen" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg p-6 rounded-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center">
+        <h3 class="text-xl font-bold">{{ isEdit ? 'Sửa Chi Nhánh' : 'Thêm Chi Nhánh Mới' }}</h3>
+        <button type="button" (click)="closeModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <input type="time" formControlName="openTime" class="bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none" />
-          <input type="time" formControlName="closeTime" class="bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none" />
+      <form [formGroup]="branchForm" (ngSubmit)="saveBranch()" class="space-y-3.5">
+        <!-- Khu vực Upload & Xem trước ảnh -->
+        <div class="space-y-2 pb-1">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Hình ảnh cơ sở
+          </label>
+          <div class="flex items-center gap-4">
+            <div class="w-28 h-20 rounded-xl bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0 relative">
+              <img *ngIf="imagePreview" [src]="imagePreview" alt="Preview" class="w-full h-full object-cover" />
+              <span *ngIf="!imagePreview" class="text-[11px] text-slate-500 text-center px-2">Chưa có ảnh</span>
+
+              <div *ngIf="isUploadingImage" class="absolute inset-0 bg-slate-950/75 flex items-center justify-center">
+                <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-emerald-500"></div>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label class="cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white transition w-fit">
+                <span>📷 Chọn ảnh từ máy</span>
+                <input type="file" accept="image/*" (change)="onFileSelected($event)" class="hidden" />
+              </label>
+
+              <button
+                *ngIf="imagePreview"
+                type="button"
+                (click)="removeImage()"
+                class="text-xs text-rose-400 hover:text-rose-300 text-left w-fit"
+              >
+                Xóa ảnh hiện tại
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-4">
-          <button type="button" (click)="closeModal()" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-xl text-sm">Hủy</button>
-          <button type="submit" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-sm">Lưu</button>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Tên chi nhánh <span class="text-rose-400">*</span></label>
+          <input
+            formControlName="name"
+            placeholder="VD: Lotus Spa - Cơ sở Quận 1"
+            class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Địa chỉ <span class="text-rose-400">*</span></label>
+          <input
+            formControlName="address"
+            placeholder="Nhập địa chỉ chi tiết..."
+            class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Số điện thoại <span class="text-rose-400">*</span></label>
+            <input
+              formControlName="phone"
+              placeholder="0901234567"
+              class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Email liên hệ</label>
+            <input
+              type="email"
+              formControlName="email"
+              placeholder="branch@lotusspa.vn"
+              class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500"
+            />
+            <span *ngIf="branchForm.get('email')?.invalid && branchForm.get('email')?.touched" class="text-[11px] text-rose-400 mt-1 block">
+              Email không đúng định dạng
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Giờ mở cửa <span class="text-rose-400">*</span></label>
+            <input type="time" formControlName="openTime" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Giờ đóng cửa <span class="text-rose-400">*</span></label>
+            <input type="time" formControlName="closeTime" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Mô tả chi nhánh</label>
+          <textarea
+            formControlName="description"
+            rows="3"
+            placeholder="Giới thiệu không gian, tiện ích nổi bật hoặc hướng dẫn chỉ đường..."
+            class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none focus:border-emerald-500"
+          ></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-700/60">
+          <button type="button" (click)="closeModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm transition">
+            Hủy
+          </button>
+          <button
+            type="submit"
+            [disabled]="branchForm.invalid || isUploadingImage"
+            class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition"
+          >
+            {{ isUploadingImage ? 'Đang tải ảnh...' : 'Lưu Chi Nhánh' }}
+          </button>
         </div>
       </form>
     </div>
