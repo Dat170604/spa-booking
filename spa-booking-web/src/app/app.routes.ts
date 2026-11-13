@@ -1,43 +1,48 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './features/home/home.component';
-import { adminGuard } from './core/guards/auth.guard';
+import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
-  // Trang chủ PUBLIC (Khách chưa đăng nhập hoặc đã đăng nhập đều vào được)
+  // ==================== 1. CÁC TRANG PUBLIC (KHÁCH VÃNG LAI XEM ĐƯỢC) ====================
   {
     path: '',
-    component: HomeComponent,
-  },
-
-  // Các trang Auth
-  {
-    path: 'auth/login',
-    loadComponent: () =>
-      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
+    loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent),
   },
   {
-    path: 'auth/register',
+    path: 'services',
     loadComponent: () =>
-      import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
-  },
-
-  // Trang đặt lịch của Khách hàng
-  {
-    path: 'booking',
-    loadComponent: () =>
-      import('./features/booking/booking.component').then((m) => m.BookingComponent),
+      import('./features/services/services-list.component').then((m) => m.ServicesListComponent),
   },
   {
     path: 'branches',
     loadComponent: () =>
       import('./features/branches/branch-list.component').then((m) => m.BranchListComponent),
   },
+
+  // ==================== 2. XÁC THỰC (ĐĂNG NHẬP / ĐĂNG KÝ) ====================
   {
-    path: 'services',
+    path: 'login',
     loadComponent: () =>
-      import('./features/services/services-list.component').then(
-        (m) => m.ServicesListComponent,
-      ),
+      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'register',
+    loadComponent: () =>
+      import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
+  },
+
+  // ==================== 3. CÁC TRANG KHÁCH HÀNG (YÊU CẦU ĐĂNG NHẬP) ====================
+  {
+    path: 'booking',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/booking/booking.component').then((m) => m.BookingComponent),
+  },
+  {
+    path: 'my-bookings',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/my-bookings/my-bookings.component').then((m) => m.MyBookingsComponent),
   },
 
   // Trang Quản trị ADMIN (Yêu cầu đăng nhập & Role ADMIN/STAFF)
@@ -97,6 +102,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/service/service.component').then(
             (m) => m.ServiceManagementComponent,
+          ),
+      },
+      {
+        path: 'my-schedule',
+        loadComponent: () =>
+          import('./features/admin/staff-schedule/staff-schedule.component').then(
+            (m) => m.StaffScheduleComponent,
           ),
       },
     ],

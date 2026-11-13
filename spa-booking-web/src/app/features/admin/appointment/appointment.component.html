@@ -1,62 +1,319 @@
 <div class="p-6 space-y-6 bg-slate-900 text-slate-100 min-h-screen">
-  <div class="flex justify-between items-center">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold">📅 Quản Lý Đặt Lịch Hẹn</h1>
-      <p class="text-slate-400 text-sm">Xem và cập nhật trạng thái lịch hẹn của khách hàng</p>
+      <h1 class="text-2xl font-bold text-white">📅 Quản Lý Lịch Hẹn Spa</h1>
+      <p class="text-slate-400 text-sm">Theo dõi, duyệt lịch hẹn và phân công kỹ thuật viên tại các chi nhánh</p>
     </div>
-
-    <!-- Filter -->
-    <select [(ngModel)]="selectedStatus" (change)="filterAppointments()" class="bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
-      <option value="ALL">Tất cả trạng thái</option>
-      <option value="PENDING">PENDING (Chờ xác nhận)</option>
-      <option value="CONFIRMED">CONFIRMED (Đã xác nhận)</option>
-      <option value="COMPLETED">COMPLETED (Hoàn thành)</option>
-      <option value="CANCELLED">CANCELLED (Đã hủy)</option>
-    </select>
+    <div class="text-xs text-slate-400 bg-slate-800/80 border border-slate-700 px-4 py-2 rounded-xl">
+      Tổng cộng: <span class="text-emerald-400 font-bold">{{ totalElements }}</span> lịch hẹn
+    </div>
   </div>
 
-  <!-- Table -->
-  <div class="bg-slate-800/80 rounded-2xl border border-slate-700/60 overflow-hidden">
-    <table class="w-full text-left text-sm">
-      <thead class="bg-slate-800 text-slate-400 uppercase text-xs">
-      <tr>
-        <th class="px-6 py-4">Mã / Khách hàng</th>
-        <th class="px-6 py-4">Chi nhánh</th>
-        <th class="px-6 py-4">Thời gian</th>
-        <th class="px-6 py-4">Tổng tiền</th>
-        <th class="px-6 py-4">Trạng thái</th>
-        <th class="px-6 py-4 text-center">Hành động</th>
-      </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-700/50 text-slate-300">
-      <tr *ngFor="let item of filteredAppointments" class="hover:bg-slate-700/30 transition">
-        <td class="px-6 py-4">
-          <p class="font-bold text-white">#BK-{{ item.id }}</p>
-          <p class="text-xs text-slate-400">{{ item.customerName }} - {{ item.customerPhone }}</p>
-        </td>
-        <td class="px-6 py-4 text-emerald-400 font-medium">{{ item.branchName }}</td>
-        <td class="px-6 py-4">
-          <p class="font-semibold">{{ item.appointmentDate }}</p>
-          <p class="text-xs text-slate-400">{{ item.startTime }} - {{ item.endTime }}</p>
-        </td>
-        <td class="px-6 py-4 font-bold text-amber-400">{{ item.totalAmount | currency:'VND':'symbol':'1.0-0' }}</td>
-        <td class="px-6 py-4">
-            <span [ngClass]="{
-              'bg-amber-500/20 text-amber-400 border-amber-500/30': item.status === 'PENDING',
-              'bg-blue-500/20 text-blue-400 border-blue-500/30': item.status === 'CONFIRMED',
-              'bg-emerald-500/20 text-emerald-400 border-emerald-500/30': item.status === 'COMPLETED',
-              'bg-red-500/20 text-red-400 border-red-500/30': item.status === 'CANCELLED'
-            }" class="px-3 py-1 rounded-full text-xs font-semibold border">
-              {{ item.status }}
-            </span>
-        </td>
-        <td class="px-6 py-4 text-center space-x-2">
-          <button *ngIf="item.status === 'PENDING'" (click)="changeStatus(item.id, 'CONFIRMED')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium">Xác nhận</button>
-          <button *ngIf="item.status === 'CONFIRMED'" (click)="changeStatus(item.id, 'COMPLETED')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium">Hoàn thành</button>
-          <button *ngIf="item.status !== 'CANCELLED' && item.status !== 'COMPLETED'" (click)="changeStatus(item.id, 'CANCELLED')" class="bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white text-xs px-3 py-1.5 rounded-lg">Hủy</button>
-        </td>
-      </tr>
-      </tbody>
-    </table>
+  <!-- Thanh bộ lọc tìm kiếm -->
+  <div class="bg-slate-800/70 border border-slate-700/80 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <input
+      type="text"
+      [(ngModel)]="filterKeyword"
+      (keyup.enter)="loadAppointments(0)"
+      placeholder="Tìm tên hoặc SĐT khách..."
+      class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
+    />
+
+    <select
+      [(ngModel)]="filterBranchId"
+      (change)="loadAppointments(0)"
+      class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
+    >
+      <option [ngValue]="null">Tất cả chi nhánh</option>
+      <option *ngFor="let b of branches" [ngValue]="b.id">{{ b.name }}</option>
+    </select>
+
+    <select
+      [(ngModel)]="filterStatus"
+      (change)="loadAppointments(0)"
+      class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
+    >
+      <option *ngFor="let st of statusOptions" [value]="st.value">{{ st.label }}</option>
+    </select>
+
+    <input
+      type="date"
+      [(ngModel)]="filterDate"
+      (change)="loadAppointments(0)"
+      class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
+    />
+
+    <div class="flex gap-2">
+      <button
+        (click)="loadAppointments(0)"
+        class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl px-4 py-2.5 text-xs transition"
+      >
+        Lọc dữ liệu
+      </button>
+      <button
+        (click)="resetFilters()"
+        class="bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl px-3 py-2.5 text-xs transition"
+        title="Xóa bộ lọc"
+      >
+        Đặt lại
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="flex justify-center py-16">
+    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
+  </div>
+
+  <!-- Bảng danh sách lịch hẹn -->
+  <div *ngIf="!isLoading" class="bg-slate-800/80 border border-slate-700 rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+        <tr class="bg-slate-950/60 border-b border-slate-700 text-xs uppercase tracking-wider text-slate-400">
+          <th class="py-3.5 px-4">Mã / Thời gian</th>
+          <th class="py-3.5 px-4">Khách hàng</th>
+          <th class="py-3.5 px-4">Chi nhánh & Dịch vụ</th>
+          <th class="py-3.5 px-4">Kỹ thuật viên</th>
+          <th class="py-3.5 px-4">Tổng tiền</th>
+          <th class="py-3.5 px-4">Trạng thái</th>
+          <th class="py-3.5 px-4 text-right">Thao tác</th>
+        </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700/60 text-sm">
+        <tr *ngFor="let item of appointments" class="hover:bg-slate-700/30 transition">
+          <!-- Mã & Thời gian -->
+          <td class="py-4 px-4 align-top whitespace-nowrap">
+            <span class="text-xs font-mono text-slate-400 block">#{{ item.id }}</span>
+            <span class="font-bold text-emerald-400 font-mono">
+                {{ item.startTime?.slice(0, 5) }} - {{ item.endTime?.slice(0, 5) }}
+              </span>
+            <span class="text-xs text-slate-300 block mt-0.5">
+                {{ item.appointmentDate | date:'dd/MM/yyyy' }}
+              </span>
+          </td>
+
+          <!-- Khách hàng -->
+          <td class="py-4 px-4 align-top">
+            <p class="font-semibold text-white">{{ item.customerName }}</p>
+            <p class="text-xs text-slate-400 mt-0.5">📞 {{ item.customerPhone }}</p>
+          </td>
+
+          <!-- Chi nhánh & Dịch vụ -->
+          <td class="py-4 px-4 align-top max-w-xs">
+            <span class="text-xs text-slate-400 block">🏢 {{ item.branchName }}</span>
+            <p class="font-medium text-slate-200 mt-0.5 line-clamp-2">{{ item.serviceName }}</p>
+            <p *ngIf="item.notes" class="text-[11px] text-amber-300/80 italic mt-1 line-clamp-1">
+              Ghi chú: {{ item.notes }}
+            </p>
+          </td>
+
+          <!-- Kỹ thuật viên (Chọn trực tiếp theo chi nhánh) -->
+          <td class="py-4 px-4 align-top whitespace-nowrap">
+            <ng-container *ngIf="item.status === 'PENDING' || item.status === 'CONFIRMED'; else readOnlyStaff">
+              <select
+                [ngModel]="item.staffId"
+                (ngModelChange)="onQuickAssignStaff(item, $event)"
+                [ngClass]="item.staffId
+                    ? 'bg-slate-900 border-slate-700 text-slate-200'
+                    : 'bg-amber-500/10 border-amber-500/40 text-amber-300'"
+                class="border rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-emerald-500 max-w-[180px]"
+              >
+                <option [ngValue]="null">-- Chọn KTV chi nhánh --</option>
+                <option *ngFor="let st of staffByBranchMap[item.branchId]" [ngValue]="st.id">
+                  💆‍♀️ {{ st.fullName }}
+                </option>
+              </select>
+            </ng-container>
+
+            <ng-template #readOnlyStaff>
+                <span *ngIf="item.staffName" class="text-xs font-medium text-slate-200 bg-slate-700/60 px-2.5 py-1 rounded-lg">
+                  💆‍♀️ {{ item.staffName }}
+                </span>
+              <span *ngIf="!item.staffName" class="text-xs text-slate-500">---</span>
+            </ng-template>
+          </td>
+
+          <!-- Tổng tiền -->
+          <td class="py-4 px-4 align-top whitespace-nowrap font-bold text-emerald-400">
+            {{ (item.totalAmount || item.totalPrice || 0) | number:'1.0-0' }} đ
+          </td>
+
+          <!-- Trạng thái -->
+          <td class="py-4 px-4 align-top whitespace-nowrap">
+              <span
+                [ngClass]="getStatusBadge(item.status).classes"
+                class="px-2.5 py-1 rounded-full text-xs font-semibold border inline-block"
+              >
+                {{ getStatusBadge(item.status).text }}
+              </span>
+          </td>
+
+          <!-- Thao tác -->
+          <td class="py-4 px-4 align-top whitespace-nowrap text-right">
+            <div class="inline-flex items-center gap-1.5">
+              <button
+                (click)="openDetailModal(item)"
+                class="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium text-white transition"
+              >
+                Chi tiết
+              </button>
+
+              <button
+                *ngIf="item.status === 'PENDING'"
+                (click)="changeStatus(item, 'CONFIRMED')"
+                class="px-2.5 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600 text-sky-400 hover:text-white border border-sky-500/30 text-xs font-semibold transition"
+              >
+                Xác nhận
+              </button>
+
+              <button
+                *ngIf="item.status === 'CONFIRMED'"
+                (click)="changeStatus(item, 'COMPLETED')"
+                class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-xs font-semibold transition"
+              >
+                Hoàn thành
+              </button>
+
+              <button
+                *ngIf="item.status === 'PENDING' || item.status === 'CONFIRMED'"
+                (click)="changeStatus(item, 'CANCELLED')"
+                class="px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 text-xs font-semibold transition"
+              >
+                Hủy
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <tr *ngIf="appointments.length === 0">
+          <td colspan="7" class="py-12 text-center text-slate-400 text-sm">
+            Không có lịch hẹn nào phù hợp với điều kiện lọc.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Phân trang -->
+    <div *ngIf="totalPages > 1" class="px-6 py-4 bg-slate-950/40 border-t border-slate-700/60 flex items-center justify-between text-xs">
+      <span class="text-slate-400">
+        Trang <strong class="text-white">{{ currentPage + 1 }}</strong> / {{ totalPages }}
+      </span>
+      <div class="flex gap-2">
+        <button
+          [disabled]="currentPage === 0"
+          (click)="loadAppointments(currentPage - 1)"
+          class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition"
+        >
+          ← Trước
+        </button>
+        <button
+          [disabled]="currentPage + 1 >= totalPages"
+          (click)="loadAppointments(currentPage + 1)"
+          class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition"
+        >
+          Sau →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Chi tiết Lịch hẹn & Phân công Kỹ thuật viên -->
+  <div *ngIf="isDetailModalOpen && selectedAppointment" class="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-xl p-6 rounded-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <h3 class="text-lg font-bold text-white">Chi Tiết Lịch Hẹn #{{ selectedAppointment.id }}</h3>
+          <span
+            [ngClass]="getStatusBadge(selectedAppointment.status).classes"
+            class="px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+          >
+            {{ getStatusBadge(selectedAppointment.status).text }}
+          </span>
+        </div>
+        <button (click)="closeDetailModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <!-- Thông tin chung -->
+      <div class="grid grid-cols-2 gap-4 text-xs bg-slate-900/80 p-4 rounded-xl border border-slate-700/60">
+        <div>
+          <span class="text-slate-400 block">Khách hàng</span>
+          <span class="font-bold text-white text-sm">{{ selectedAppointment.customerName }}</span>
+          <span class="text-slate-300 block mt-0.5">📞 {{ selectedAppointment.customerPhone }}</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block">Cơ sở & Thời gian</span>
+          <span class="font-bold text-white text-sm">{{ selectedAppointment.branchName }}</span>
+          <span class="text-emerald-400 font-mono block mt-0.5">
+            {{ selectedAppointment.appointmentDate | date:'dd/MM/yyyy' }} • {{ selectedAppointment.startTime?.slice(0,5) }} - {{ selectedAppointment.endTime?.slice(0,5) }}
+          </span>
+        </div>
+        <div *ngIf="selectedAppointment.notes" class="col-span-2 pt-2 border-t border-slate-800">
+          <span class="text-slate-400 block">Ghi chú của khách:</span>
+          <p class="text-slate-200 italic mt-0.5">"{{ selectedAppointment.notes }}"</p>
+        </div>
+      </div>
+
+      <!-- Danh sách dịch vụ chi tiết -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Danh sách liệu trình đăng ký
+        </h4>
+        <div class="space-y-2">
+          <div
+            *ngFor="let d of selectedAppointment.details"
+            class="flex items-center justify-between bg-slate-900 border border-slate-700/80 p-3 rounded-xl text-xs"
+          >
+            <div>
+              <p class="font-semibold text-white">{{ d.serviceName }}</p>
+              <span class="text-slate-400">{{ d.durationMinutes }} phút</span>
+            </div>
+            <span class="font-bold text-emerald-400">{{ d.price | number:'1.0-0' }} đ</span>
+          </div>
+        </div>
+        <div class="flex justify-between items-center pt-2 text-sm">
+          <span class="text-slate-400">Tổng thanh toán:</span>
+          <span class="text-lg font-extrabold text-emerald-400">
+            {{ (selectedAppointment.totalAmount || selectedAppointment.totalPrice || 0) | number:'1.0-0' }} đ
+          </span>
+        </div>
+      </div>
+
+      <!-- Khu vực Phân công Kỹ thuật viên -->
+      <div *ngIf="selectedAppointment.status !== 'CANCELLED' && selectedAppointment.status !== 'COMPLETED'" class="space-y-2.5 pt-3 border-t border-slate-700">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Phân công kỹ thuật viên phụ trách
+        </label>
+        <div class="flex gap-2">
+          <select
+            [(ngModel)]="selectedStaffId"
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
+          >
+            <option [ngValue]="null">-- Chọn kỹ thuật viên tại {{ selectedAppointment.branchName }} --</option>
+            <option *ngFor="let st of staffList" [ngValue]="st.id">
+              {{ st.fullName }} ({{ st.phone || 'KTV' }})
+            </option>
+          </select>
+          <button
+            (click)="saveStaffAssignment()"
+            [disabled]="!selectedStaffId || isAssigningStaff"
+            class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold rounded-xl text-xs transition"
+          >
+            {{ isAssigningStaff ? 'Đang lưu...' : 'Lưu phân công' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button
+          (click)="closeDetailModal()"
+          class="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm transition"
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
   </div>
 </div>

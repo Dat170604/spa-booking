@@ -1,79 +1,238 @@
-<div class="max-w-4xl mx-auto py-10 px-4">
-  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-    <h2 class="text-2xl font-bold text-slate-800 mb-1">✨ Đặt Lịch Hẹn Spa</h2>
-    <p class="text-slate-500 text-sm mb-6">Chọn chi nhánh, thời gian và dịch vụ mong muốn</p>
-
-    <!-- Alert Thông báo -->
-    <div *ngIf="errorMessage" class="mb-4 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">
-      {{ errorMessage }}
-    </div>
-    <div *ngIf="successMessage" class="mb-4 p-4 bg-emerald-50 text-emerald-700 text-sm rounded-xl border border-emerald-200 font-medium">
-      {{ successMessage }}
+<div class="min-h-screen bg-slate-950 text-slate-200 py-10 px-6">
+  <div class="max-w-6xl mx-auto space-y-8">
+    <!-- Tiêu đề -->
+    <div>
+      <h1 class="text-3xl font-bold text-white">✨ Đặt Lịch Trải Nghiệm Spa</h1>
+      <p class="text-slate-400 mt-1">Bạn có thể chọn một hoặc nhiều liệu trình kết hợp trong cùng một buổi hẹn</p>
     </div>
 
-    <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()" class="space-y-6">
-      <!-- 1. Chọn Chi Nhánh -->
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2">1. Chọn Chi Nhánh *</label>
-        <select formControlName="branchId" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700">
-          <option value="">-- Chọn chi nhánh gần nhất --</option>
-          <option *ngFor="let b of branches" [value]="b.id">
-            {{ b.name }} ({{ b.address }})
-          </option>
-        </select>
-      </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <!-- Cột Trái: Form chọn thông tin -->
+      <form [formGroup]="bookingForm" (ngSubmit)="submitBooking()" class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
 
-      <!-- 2. Chọn Ngày & Giờ -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2">2. Chọn Ngày *</label>
-          <input type="date" formControlName="appointmentDate" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700" />
+        <!-- Thông báo lỗi -->
+        <div *ngIf="errorMessage" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-400 text-sm flex items-center gap-2">
+          <span>⚠️</span>
+          <span>{{ errorMessage }}</span>
         </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-2">3. Giờ Bắt Đầu *</label>
-          <input type="time" formControlName="startTime" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700" />
-        </div>
-      </div>
 
-      <!-- 3. Chọn Dịch Vụ Spa -->
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2">4. Chọn Dịch Vụ (Có thể chọn nhiều dịch vụ) *</label>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto p-1">
-          <div *ngFor="let s of services"
-               (click)="toggleService(s.id)"
-               [ngClass]="{ 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-500/20': isServiceSelected(s.id) }"
-               class="p-4 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-400 transition flex items-center justify-between">
-            <div>
-              <p class="font-bold text-slate-800 text-sm">{{ s.name }}</p>
-              <p class="text-xs text-slate-500">⏱ {{ s.durationMinutes }} phút</p>
+        <!-- Bước 1: Chọn Chi Nhánh -->
+        <div class="space-y-2">
+          <label class="block text-sm font-semibold text-white">
+            1. Chọn cơ sở Lotus Spa <span class="text-rose-400">*</span>
+          </label>
+          <select
+            formControlName="branchId"
+            (change)="onBranchChange()"
+            class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500 transition"
+          >
+            <option [ngValue]="null">-- Chọn chi nhánh gần bạn --</option>
+            <option *ngFor="let b of branches" [ngValue]="b.id">
+              {{ b.name }} — {{ b.address }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Bước 2: Chọn Nhiều Dịch Vụ -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="block text-sm font-semibold text-white">
+              2. Chọn các liệu trình dịch vụ <span class="text-rose-400">*</span>
+            </label>
+            <span class="text-xs text-emerald-400 font-medium">
+              Đã chọn: {{ selectedServiceIds.length }} dịch vụ
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-1">
+            <div
+              *ngFor="let s of services"
+              (click)="toggleService(s.id)"
+              [ngClass]="isServiceSelected(s.id)
+                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500/50'
+                : 'bg-slate-950 border-slate-800 hover:border-slate-600'"
+              class="p-3.5 rounded-xl border cursor-pointer transition flex items-start justify-between gap-3 select-none"
+            >
+              <div class="space-y-1">
+                <p class="text-sm font-semibold text-white leading-snug">{{ s.name }}</p>
+                <div class="flex items-center gap-3 text-xs">
+                  <span class="text-emerald-400 font-bold">{{ s.price | number:'1.0-0' }} đ</span>
+                  <span class="text-slate-400">• {{ s.durationMinutes }} phút</span>
+                </div>
+              </div>
+
+              <div
+                [ngClass]="isServiceSelected(s.id)
+                  ? 'bg-emerald-500 border-emerald-500 text-slate-950'
+                  : 'border-slate-600 text-transparent'"
+                class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold transition"
+              >
+                ✓
+              </div>
             </div>
-            <span class="font-bold text-emerald-700 text-sm">{{ s.price | currency:'VND':'symbol':'1.0-0' }}</span>
           </div>
         </div>
-      </div>
 
-      <!-- Ghi chú -->
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-2">Ghi Chú Thêm (Nếu có)</label>
-        <textarea formControlName="notes" rows="3" placeholder="Yêu cầu đặc biệt về dịch vụ..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700"></textarea>
-      </div>
-
-      <!-- Tổng tiền & Thời lượng tổng -->
-      <div class="bg-slate-50 p-4 rounded-xl flex items-center justify-between border border-slate-200">
-        <div>
-          <p class="text-xs text-slate-500">Tổng thời lượng ước tính: <span class="font-semibold text-slate-800">{{ getTotalDuration() }} phút</span></p>
-          <p class="text-xs text-slate-500">Đã chọn: <span class="font-semibold text-emerald-700">{{ selectedServiceIds.length }} dịch vụ</span></p>
+        <!-- Bước 3: Chọn Kỹ Thuật Viên (Tùy chọn) -->
+        <div class="space-y-2" *ngIf="staffList.length > 0">
+          <label class="block text-sm font-semibold text-white">
+            3. Chọn kỹ thuật viên (Không bắt buộc)
+          </label>
+          <select
+            formControlName="staffId"
+            (change)="onStaffOrDateChange()"
+            class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500 transition"
+          >
+            <option [ngValue]="null">Để Spa tự sắp xếp chuyên viên phù hợp nhất</option>
+            <option *ngFor="let st of staffList" [ngValue]="st.id">
+              {{ st.fullName }}
+            </option>
+          </select>
         </div>
-        <div class="text-right">
-          <p class="text-xs text-slate-500">Tổng Thanh Toán</p>
-          <p class="text-xl font-extrabold text-emerald-600">{{ getTotalPrice() | currency:'VND':'symbol':'1.0-0' }}</p>
-        </div>
-      </div>
 
-      <!-- Submit Button -->
-      <button type="submit" [disabled]="isSubmitting" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-md disabled:opacity-50">
-        {{ isSubmitting ? 'Đang xử lý...' : 'Xác Nhận Đặt Lịch' }}
-      </button>
-    </form>
+        <!-- Bước 4: Chọn Ngày & Khung Giờ -->
+        <div class="space-y-4">
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-white">
+              {{ staffList.length > 0 ? '4.' : '3.' }} Chọn ngày hẹn <span class="text-rose-400">*</span>
+            </label>
+            <input
+              type="date"
+              [min]="minDate"
+              formControlName="appointmentDate"
+              (change)="onStaffOrDateChange()"
+              class="w-full sm:w-64 bg-slate-950 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+
+          <div class="space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <label class="block text-sm font-semibold text-white">
+                Chọn khung giờ bắt đầu <span class="text-rose-400">*</span>
+              </label>
+              <div *ngIf="bookingForm.get('staffId')?.value" class="flex items-center gap-3 text-[11px]">
+                <span class="flex items-center gap-1 text-slate-300">
+                  <span class="w-2.5 h-2.5 rounded-sm bg-slate-950 border border-slate-700 inline-block"></span> Còn trống
+                </span>
+                <span class="flex items-center gap-1 text-rose-400">
+                  <span class="w-2.5 h-2.5 rounded-sm bg-rose-950/60 border border-rose-800/60 inline-block"></span> KTV đã có lịch
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2.5">
+              <button
+                type="button"
+                *ngFor="let slot of timeSlots"
+                [disabled]="isSlotBusy(slot)"
+                (click)="selectTimeSlot(slot)"
+                [ngClass]="{
+                  'bg-rose-950/40 text-rose-400/60 border-rose-900/50 cursor-not-allowed line-through': isSlotBusy(slot),
+                  'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-900/30 font-bold': !isSlotBusy(slot) && bookingForm.get('startTime')?.value === slot,
+                  'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600': !isSlotBusy(slot) && bookingForm.get('startTime')?.value !== slot
+                }"
+                class="py-2.5 px-2 rounded-xl border text-xs font-mono transition text-center flex flex-col items-center justify-center"
+              >
+                <span>{{ slot }}</span>
+                <span *ngIf="isSlotBusy(slot)" class="text-[9px] font-sans no-underline text-rose-400 mt-0.5">
+                  Đã bận
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bước 5: Ghi chú thêm -->
+        <div class="space-y-2">
+          <label class="block text-sm font-semibold text-white">Ghi chú cho kỹ thuật viên</label>
+          <textarea
+            formControlName="notes"
+            rows="3"
+            placeholder="VD: Đau mỏi vùng cổ vai gáy, dị ứng tinh dầu sả, đi 2 người..."
+            class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl p-3.5 text-sm outline-none focus:border-emerald-500 transition"
+          ></textarea>
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="bookingForm.invalid || selectedServiceIds.length === 0 || isSubmitting"
+          class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-sm transition shadow-xl shadow-emerald-900/30"
+        >
+          {{ isSubmitting ? 'Đang gửi yêu cầu đặt lịch...' : 'Xác Nhận Đặt Lịch Hẹn' }}
+        </button>
+      </form>
+
+      <!-- Cột Phải: Tóm tắt phiếu đặt lịch -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 sticky top-24">
+        <h3 class="text-lg font-bold text-white border-b border-slate-800 pb-3">
+          Tóm Tắt Lịch Hẹn
+        </h3>
+
+        <div class="space-y-4 text-sm">
+          <div>
+            <span class="text-xs text-slate-400 block">Cơ sở thực hiện</span>
+            <span class="font-semibold text-white">
+              {{ selectedBranch ? selectedBranch.name : 'Chưa chọn chi nhánh' }}
+            </span>
+            <p *ngIf="selectedBranch" class="text-xs text-slate-400 mt-0.5">{{ selectedBranch.address }}</p>
+          </div>
+
+          <div class="space-y-2">
+            <span class="text-xs text-slate-400 block">
+              Dịch vụ đã chọn ({{ selectedServicesList.length }})
+            </span>
+
+            <div *ngIf="selectedServicesList.length === 0" class="text-xs text-slate-500 italic">
+              Chưa chọn liệu trình nào
+            </div>
+
+            <div *ngFor="let item of selectedServicesList" class="flex items-start justify-between gap-2 text-xs bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <div>
+                <p class="font-semibold text-slate-200">{{ item.name }}</p>
+                <span class="text-slate-400">{{ item.durationMinutes }} phút</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span class="text-emerald-400 font-semibold">{{ item.price | number:'1.0-0' }} đ</span>
+                <button
+                  type="button"
+                  (click)="toggleService(item.id)"
+                  class="text-slate-500 hover:text-rose-400 font-bold px-1"
+                  title="Bỏ chọn"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
+            <div>
+              <span class="text-xs text-slate-400 block">Ngày & Giờ bắt đầu</span>
+              <span class="font-medium text-slate-200">
+                {{ bookingForm.get('appointmentDate')?.value || '--/--' }}
+              </span>
+              <span class="font-mono font-bold text-emerald-400 ml-1">
+                {{ bookingForm.get('startTime')?.value || '--:--' }}
+              </span>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-slate-400 block">Tổng thời lượng</span>
+              <span class="font-semibold text-slate-200">{{ totalDuration }} phút</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
+          <span class="text-sm text-slate-400">Tổng thanh toán dự kiến</span>
+          <span class="text-2xl font-extrabold text-emerald-400">
+            {{ totalAmount | number:'1.0-0' }} đ
+          </span>
+        </div>
+
+        <p class="text-[11px] text-slate-500 leading-relaxed">
+          * Quý khách vui lòng đến trước giờ hẹn 10 phút để thưởng thức trà thảo mộc. Thanh toán trực tiếp tại quầy sau khi hoàn thành liệu trình.
+        </p>
+      </div>
+    </div>
   </div>
 </div>

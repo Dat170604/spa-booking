@@ -37,6 +37,10 @@ export class UserService {
     return this.http.post<any>(`${this.API_URL}/staff`, request);
   }
 
+  getStaffByBranch(branchId: number): Observable<any> {
+    return this.http.get<any>(`${this.API_URL}/staff/branch/${branchId}`);
+  }
+
   toggleUserStatus(id: number): Observable<void> {
     return this.http.patch<void>(`${this.API_URL}/${id}/toggle-status`, {});
   }

@@ -31,7 +31,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STAFF')")
     public ResponseEntity<Page<UserResponse>> searchUsers(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String role,
