@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lotus-spa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spa_booking
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d spa_booking"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - spa-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: lotus-spa-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - spa-network
+
+  backend:
+    image: dat170604/lotus-spa-backend:latest
+    build:
+      context: ./spa-booking-service
+      dockerfile: Dockerfile
+    container_name: lotus-spa-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/spa_booking
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password123
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8080
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - spa-network
+
+  frontend:
+    image: dat170604/lotus-spa-frontend:latest
+    build:
+      context: ./spa-booking-web
+      dockerfile: Dockerfile
+    container_name: lotus-spa-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"
+    networks:
+      - spa-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_uploads:
+
+networks:
+  spa-network:
+    driver: bridge

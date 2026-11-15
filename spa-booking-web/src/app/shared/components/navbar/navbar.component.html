@@ -41,7 +41,7 @@
 
         <!-- Khi ĐÃ ĐĂNG NHẬP -->
         <ng-container *ngIf="isLoggedIn">
-          <a *ngIf="isAdmin || isStaff" routerLink="/admin/dashboard"
+          <a *ngIf="isAdmin || isStaff" [routerLink]="isAdmin ? '/admin/dashboard' : '/admin/my-schedule'"
              class="bg-amber-100 text-amber-800 hover:bg-amber-200 text-xs font-semibold px-3 py-1.5 rounded-full transition">
             ⚙️ Trang quản trị
           </a>

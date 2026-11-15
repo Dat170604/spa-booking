@@ -41,7 +41,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
           AND (:status IS NULL OR :status = '' OR a.status = :status)
           AND (:branchId IS NULL OR a.branch.id = :branchId)
           AND (CAST(:date AS date) IS NULL OR a.appointmentDate = :date)
-        ORDER BY a.appointmentDate ASC, a.startTime ASC
+        ORDER BY a.appointmentDate DESC, a.startTime DESC
     """)
     Page<AppointmentEntity> searchAppointments(
             @Param("keyword") String keyword,

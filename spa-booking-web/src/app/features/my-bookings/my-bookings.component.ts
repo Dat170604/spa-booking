@@ -12,14 +12,14 @@ import { AppointmentService } from '../../core/services/appointment.service';
 export class MyBookingsComponent implements OnInit {
   bookings: any[] = [];
   filteredBookings: any[] = [];
-  selectedStatus = 'ALL';
-  isLoading = true;
+  selectedStatus = '';
+  isLoading = false;
 
   statusTabs = [
-    { key: 'ALL', label: 'Tất cả lịch hẹn' },
+    { key: '', label: 'Tất cả' },
     { key: 'PENDING', label: 'Chờ xác nhận' },
     { key: 'CONFIRMED', label: 'Đã xác nhận' },
-    { key: 'COMPLETED', label: 'Đã hoàn thành' },
+    { key: 'COMPLETED', label: 'Hoàn thành' },
     { key: 'CANCELLED', label: 'Đã hủy' },
   ];
 
@@ -35,14 +35,14 @@ export class MyBookingsComponent implements OnInit {
   loadMyBookings(): void {
     this.isLoading = true;
     this.appointmentService.getMyAppointments(0, 50).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.bookings = res?.content || (Array.isArray(res) ? res : []);
-        this.filterByStatus(this.selectedStatus);
+        this.applyFilter();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Lỗi tải lịch hẹn cá nhân:', err);
+        console.error('Lỗi tải danh sách lịch hẹn:', err);
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -51,20 +51,46 @@ export class MyBookingsComponent implements OnInit {
 
   filterByStatus(status: string): void {
     this.selectedStatus = status;
-    if (status === 'ALL') {
+    this.applyFilter();
+  }
+
+  private applyFilter(): void {
+    if (!this.selectedStatus) {
       this.filteredBookings = [...this.bookings];
     } else {
-      this.filteredBookings = this.bookings.filter((b) => b.status === status);
+      this.filteredBookings = this.bookings.filter((b) => b.status === this.selectedStatus);
     }
   }
 
-  cancelBooking(booking: any): void {
-    const serviceName = booking.serviceName || booking.service?.name || 'này';
-    const confirmed = confirm(`Bạn có chắc chắn muốn hủy lịch hẹn dịch vụ "${serviceName}" không?`);
-    if (!confirmed) return;
+  // Chỉ cho phép khách hàng hủy lịch trước thời điểm hẹn ít nhất 24 giờ
+  canCancel(item: any): boolean {
+    if (!['PENDING', 'CONFIRMED'].includes(item.status)) {
+      return false;
+    }
+    if (!item.appointmentDate || !item.startTime) {
+      return false;
+    }
 
-    this.appointmentService.cancelAppointment(booking.id).subscribe({
+    const timePart = item.startTime.slice(0, 5); // "HH:mm"
+    const appointmentDateTime = new Date(`${item.appointmentDate}T${timePart}:00`);
+    const now = new Date();
+
+    const diffInHours = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    return diffInHours >= 24;
+  }
+
+  cancelBooking(item: any): void {
+    if (!this.canCancel(item)) {
+      alert('Bạn chỉ có thể hủy lịch hẹn trước giờ thực hiện ít nhất 24 giờ.');
+      return;
+    }
+
+    const reason = prompt(`Nhập lý do hủy lịch hẹn #${item.id} (không bắt buộc):`);
+    if (reason === null) return; // Người dùng bấm Cancel trên hộp thoại prompt
+
+    this.appointmentService.cancelAppointment(item.id, reason.trim()).subscribe({
       next: () => {
+        alert('Đã hủy lịch hẹn thành công!');
         this.loadMyBookings();
       },
       error: (err) => {

@@ -39,6 +39,12 @@ export class AppointmentManagementComponent implements OnInit {
   selectedStaffId: number | null = null;
   isAssigningStaff = false;
 
+  // Modal nhập lý do hủy (Admin)
+  isCancelModalOpen = false;
+  cancellingAppointment: any = null;
+  adminCancelReason = '';
+  isSubmittingCancel = false;
+
   statusOptions = [
     { value: '', label: 'Tất cả trạng thái' },
     { value: 'PENDING', label: 'Chờ xác nhận' },
@@ -132,7 +138,6 @@ export class AppointmentManagementComponent implements OnInit {
     this.loadAppointments(0);
   }
 
-  // Phân công nhanh KTV ngay trên bảng danh sách
   onQuickAssignStaff(appointment: any, staffId: number | null): void {
     if (!staffId) return;
     this.appointmentService.assignStaff(appointment.id, Number(staffId)).subscribe({
@@ -149,9 +154,12 @@ export class AppointmentManagementComponent implements OnInit {
   }
 
   changeStatus(appointment: any, newStatus: string): void {
-    const actionLabel =
-      newStatus === 'CONFIRMED' ? 'XÁC NHẬN' : newStatus === 'COMPLETED' ? 'HOÀN THÀNH' : 'HỦY';
+    if (newStatus === 'CANCELLED') {
+      this.openAdminCancelModal(appointment);
+      return;
+    }
 
+    const actionLabel = newStatus === 'CONFIRMED' ? 'XÁC NHẬN' : 'HOÀN THÀNH';
     const confirmed = confirm(
       `Bạn muốn chuyển lịch hẹn #${appointment.id} của khách "${appointment.customerName}" sang trạng thái ${actionLabel}?`,
     );
@@ -168,6 +176,46 @@ export class AppointmentManagementComponent implements OnInit {
         alert(err?.error?.message || 'Cập nhật trạng thái thất bại!');
       },
     });
+  }
+
+  openAdminCancelModal(appointment: any): void {
+    this.cancellingAppointment = appointment;
+    this.adminCancelReason = '';
+    this.isCancelModalOpen = true;
+  }
+
+  closeAdminCancelModal(): void {
+    this.isCancelModalOpen = false;
+    this.cancellingAppointment = null;
+    this.adminCancelReason = '';
+  }
+
+  confirmAdminCancel(): void {
+    if (!this.cancellingAppointment) return;
+    const reason = this.adminCancelReason.trim();
+    if (!reason) {
+      alert('Vui lòng nhập lý do hủy lịch hẹn!');
+      return;
+    }
+
+    this.isSubmittingCancel = true;
+    this.appointmentService
+      .updateStatus(this.cancellingAppointment.id, 'CANCELLED', reason)
+      .subscribe({
+        next: (updated) => {
+          this.isSubmittingCancel = false;
+          if (this.selectedAppointment?.id === this.cancellingAppointment.id) {
+            this.selectedAppointment = updated;
+          }
+          this.closeAdminCancelModal();
+          this.loadAppointments(this.currentPage);
+        },
+        error: (err) => {
+          this.isSubmittingCancel = false;
+          alert(err?.error?.message || 'Hủy lịch hẹn thất bại!');
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   openDetailModal(appointment: any): void {

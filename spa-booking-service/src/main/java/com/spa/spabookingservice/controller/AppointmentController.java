@@ -81,14 +81,15 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getById(id));
     }
 
-    // 6. Admin cập nhật trạng thái (CONFIRMED, COMPLETED, CANCELLED, NO_SHOW)
+    // 6. Admin / STAFF cập nhật trạng thái (CONFIRMED, COMPLETED, CANCELLED, NO_SHOW)
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<AppointmentResponse> updateStatus(
             @PathVariable Long id,
-            @RequestBody Map<String, String> body
+            @RequestParam String status,
+            @RequestParam(required = false) String reason
     ) {
-        return ResponseEntity.ok(appointmentService.updateStatus(id, body.get("status")));
+        return ResponseEntity.ok(appointmentService.updateStatus(id, status, reason));
     }
 
     // 7. Admin phân công kỹ thuật viên

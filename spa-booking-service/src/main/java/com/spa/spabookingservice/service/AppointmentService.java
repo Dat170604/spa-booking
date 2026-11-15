@@ -14,7 +14,7 @@ public interface AppointmentService {
     AppointmentResponse cancelAppointment(String userEmail, Long appointmentId, String reason);
     Page<AppointmentResponse> searchAppointments(String keyword, String status, Long branchId, LocalDate date, Pageable pageable);
     AppointmentResponse getById(Long id);
-    AppointmentResponse updateStatus(Long id, String status);
+    AppointmentResponse updateStatus(Long id, String status, String reason);
     AppointmentResponse assignStaff(Long id, Long staffId);
     List<AppointmentResponse> getStaffBusySlots(Long staffId, LocalDate date);
     Page<AppointmentResponse> getStaffSchedule(String staffEmail, String status, LocalDate date, Pageable pageable);

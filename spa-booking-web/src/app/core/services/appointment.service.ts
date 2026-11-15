@@ -65,8 +65,12 @@ export class AppointmentService {
   }
 
   // 7. Cập nhật trạng thái lịch hẹn (CONFIRMED, COMPLETED, CANCELLED, NO_SHOW)
-  updateStatus(id: number, status: string): Observable<any> {
-    return this.http.patch<any>(`${this.apiUrl}/${id}/status`, { status });
+  updateStatus(id: number, status: string, reason?: string): Observable<any> {
+    let params = new HttpParams().set('status', status);
+    if (reason && reason.trim()) {
+      params = params.set('reason', reason.trim());
+    }
+    return this.http.patch<any>(`${this.apiUrl}/${id}/status`, {}, { params });
   }
 
   // 8. Phân công kỹ thuật viên

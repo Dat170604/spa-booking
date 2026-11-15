@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,20 +125,31 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional
     public AppointmentResponse cancelAppointment(String userEmail, Long appointmentId, String reason) {
         AppointmentEntity appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn"));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn"));
 
         if (!appointment.getCustomer().getEmail().equals(userEmail)) {
-            throw new RuntimeException("Bạn không có quyền hủy lịch hẹn này");
+            throw new IllegalStateException("Bạn không có quyền hủy lịch hẹn này");
         }
 
         if (!List.of("PENDING", "CONFIRMED").contains(appointment.getStatus())) {
-            throw new RuntimeException("Chỉ có thể hủy lịch hẹn đang chờ xác nhận hoặc đã xác nhận");
+            throw new IllegalStateException("Chỉ có thể hủy lịch hẹn đang chờ xác nhận hoặc đã xác nhận");
+        }
+
+        // Kiểm tra quy định hủy trước 24h
+        LocalDateTime appointmentDateTime = LocalDateTime.of(
+                appointment.getAppointmentDate(),
+                appointment.getStartTime()
+        );
+        if (LocalDateTime.now().plusHours(24).isAfter(appointmentDateTime)) {
+            throw new IllegalStateException("Bạn chỉ có thể hủy lịch hẹn trước thời gian thực hiện ít nhất 24 giờ. Vui lòng liên hệ hotline chi nhánh để được hỗ trợ!");
         }
 
         appointment.setStatus("CANCELLED");
         if (reason != null && !reason.isBlank()) {
-            String oldNote = appointment.getNotes() != null ? appointment.getNotes() + " | " : "";
-            appointment.setNotes(oldNote + "Lý do hủy: " + reason);
+            String oldNote = (appointment.getNotes() != null && !appointment.getNotes().isBlank())
+                    ? appointment.getNotes() + " | "
+                    : "";
+            appointment.setNotes(oldNote + "Khách hủy: " + reason.trim());
         }
 
         return mapToResponse(appointmentRepository.save(appointment));
@@ -159,10 +171,22 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional
-    public AppointmentResponse updateStatus(Long id, String status) {
+    public AppointmentResponse updateStatus(Long id, String status, String reason) {
         AppointmentEntity appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn"));
-        appointment.setStatus(status.toUpperCase());
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn"));
+
+        String upperStatus = status.toUpperCase();
+        if ("CANCELLED".equals(upperStatus)) {
+            if (reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException("Vui lòng nhập lý do hủy lịch hẹn!");
+            }
+            String oldNote = (appointment.getNotes() != null && !appointment.getNotes().isBlank())
+                    ? appointment.getNotes() + " | "
+                    : "";
+            appointment.setNotes(oldNote + "Admin hủy: " + reason.trim());
+        }
+
+        appointment.setStatus(upperStatus);
         return mapToResponse(appointmentRepository.save(appointment));
     }
 

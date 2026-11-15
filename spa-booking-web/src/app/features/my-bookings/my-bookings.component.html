@@ -62,7 +62,7 @@
             <p *ngIf="item.staffName || item.staff?.fullName">
               💆‍♀️ Kỹ thuật viên: <span class="text-slate-200">{{ item.staffName || item.staff?.fullName }}</span>
             </p>
-            <p *ngIf="item.notes" class="italic text-slate-500">Ghi chú: "{{ item.notes }}"</p>
+            <p *ngIf="item.notes" class="italic text-slate-400">Ghi chú: "{{ item.notes }}"</p>
           </div>
         </div>
 
@@ -75,15 +75,22 @@
             </span>
           </div>
 
-          <div class="flex items-center gap-2">
-            <!-- Chỉ cho phép hủy khi lịch đang PENDING hoặc CONFIRMED -->
+          <div class="flex flex-col items-end gap-1.5">
+            <!-- Chỉ cho phép hủy khi lịch đang PENDING/CONFIRMED và còn trước giờ hẹn >= 24h -->
             <button
-              *ngIf="item.status === 'PENDING' || item.status === 'CONFIRMED'"
+              *ngIf="canCancel(item)"
               (click)="cancelBooking(item)"
               class="px-4 py-2 rounded-xl bg-rose-600/15 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 text-xs font-semibold transition"
             >
               Hủy lịch hẹn
             </button>
+
+            <span
+              *ngIf="(item.status === 'PENDING' || item.status === 'CONFIRMED') && !canCancel(item)"
+              class="text-[11px] text-amber-400/80 italic text-right max-w-[230px]"
+            >
+              * Chỉ được hủy online trước 24h. Vui lòng gọi chi nhánh nếu cần đổi lịch.
+            </span>
 
             <a
               *ngIf="item.status === 'COMPLETED'"
