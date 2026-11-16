@@ -1,15 +1,29 @@
 server:
     port: ${SERVER_PORT:8080}
 
-
 spring:
     application:
         name: spa-booking-service
+
+    config:
+        import: optional:file:../.env[.properties],optional:file:.env[.properties]
 
     web:
         error:
             include-message: always
             include-binding-errors: always
+
+    mail:
+        host: ${MAIL_HOST:smtp.gmail.com}
+        port: ${MAIL_PORT:587}
+        username: ${MAIL_USERNAME}
+        password: ${MAIL_PASSWORD}
+        properties:
+            mail:
+                smtp:
+                    auth: true
+                    starttls:
+                        enable: true
 
     datasource:
         url: ${DB_URL:jdbc:postgresql://localhost:5432/spa_booking_db}
@@ -18,8 +32,10 @@ spring:
         driver-class-name: org.postgresql.Driver
 
     flyway:
+        enabled: true
         baseline-on-migrate: true
         baseline-version: 0
+        locations: classpath:db/migration
 
     jpa:
         hibernate:
@@ -28,7 +44,6 @@ spring:
         properties:
             hibernate:
                 format_sql: true
-                dialect: org.hibernate.dialect.PostgreSQLDialect
                 jdbc:
                     lob:
                         non_contextual_creation: true
@@ -39,6 +54,20 @@ spring:
             port: ${REDIS_PORT:6379}
             timeout: 2000ms
 
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info
+    endpoint:
+        health:
+            show-details: when-authorized
+
+springdoc:
+    api-docs:
+        path: /v3/api-docs
+    swagger-ui:
+        path: /swagger-ui.html
 
 app:
     admin:

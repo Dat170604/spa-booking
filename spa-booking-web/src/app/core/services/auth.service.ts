@@ -1,8 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, finalize, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AuthResponse, LoginRequest, RefreshTokenRequest, RegisterRequest } from '../models/auth.model';
+import {
+  AuthResponse,
+  LoginRequest,
+  RefreshTokenRequest,
+  RegisterRequest,
+} from '../models/auth.model';
 import { TokenService } from './token.service';
 import { Router } from '@angular/router';
 
@@ -23,6 +28,7 @@ export class AuthService {
     this.currentUserSubject = new BehaviorSubject<any>(this.tokenService.getUserInfo());
     this.currentUser$ = this.currentUserSubject.asObservable();
   }
+
   public register(request: RegisterRequest): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${this.API_URL}/register`, request)
@@ -45,13 +51,32 @@ export class AuthService {
   }
 
   public logout(): void {
-    this.tokenService.clearStorage();
-    this.currentUserSubject.next(null);
-    this.router.navigate(['/']);
+    const refreshToken = this.tokenService.getRefreshToken();
+
+    // Nếu không còn refreshToken trong storage thì dọn dẹp local luôn
+    if (!refreshToken) {
+      this.clearLocalSession();
+      return;
+    }
+
+    const request: RefreshTokenRequest = { refreshToken };
+
+    // Gọi API thu hồi Access Token (Redis) & Refresh Token (DB)
+    // Dùng finalize() để luôn xóa session ở client kể cả khi API trả về 401/lỗi mạng
+    this.http
+      .post(`${this.API_URL}/logout`, request)
+      .pipe(finalize(() => this.clearLocalSession()))
+      .subscribe();
   }
 
   public isLoggedIn(): boolean {
     return !!this.tokenService.getAccessToken();
+  }
+
+  private clearLocalSession(): void {
+    this.tokenService.clearStorage();
+    this.currentUserSubject.next(null);
+    this.router.navigate(['/']);
   }
 
   private handleAuthSuccess(response: AuthResponse): void {

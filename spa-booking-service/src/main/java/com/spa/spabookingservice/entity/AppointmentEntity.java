@@ -63,4 +63,8 @@ public class AppointmentEntity {
     @Builder.Default
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AppointmentDetailEntity> details = new ArrayList<>();
+
+    @Column(name = "is_reminded", nullable = false)
+    @Builder.Default
+    private boolean isReminded = false;
 }

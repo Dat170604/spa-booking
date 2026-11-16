@@ -5,11 +5,15 @@ import com.spa.spabookingservice.dto.appointment.AppointmentResponse;
 import com.spa.spabookingservice.entity.*;
 import com.spa.spabookingservice.repository.*;
 import com.spa.spabookingservice.service.AppointmentService;
+import com.spa.spabookingservice.service.EmailNotificationService;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,6 +22,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,10 +33,40 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final ServiceRepository serviceRepository;
+    private final RedissonClient redissonClient;
+    private final TransactionTemplate transactionTemplate;
+    private final EmailNotificationService emailNotificationService;
 
     @Override
-    @Transactional
     public AppointmentResponse createAppointment(String userEmail, AppointmentRequest request) {
+        // Nếu khách chọn KTV cụ thể -> khóa theo KTV + Ngày; nếu không chọn -> khóa theo Chi nhánh + Ngày
+        String lockKey = (request.getStaffId() != null)
+                ? String.format("lock:booking:staff:%d:date:%s", request.getStaffId(), request.getAppointmentDate())
+                : String.format("lock:booking:branch:%d:date:%s", request.getBranchId(), request.getAppointmentDate());
+
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            // Chờ tối đa 5s để lấy khóa, tự động nhả sau 10s nếu có sự cố
+            boolean isLocked = lock.tryLock(5, 10, TimeUnit.SECONDS);
+            if (!isLocked) {
+                throw new RuntimeException("Hệ thống đang xử lý lịch đặt cho khung giờ này, vui lòng thử lại sau vài giây!");
+            }
+
+            // Mở Transaction BÊN TRONG vùng khóa để đảm bảo COMMIT xong mới nhả khóa
+            return transactionTemplate.execute(status -> executeCreateAppointment(userEmail, request));
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Quá trình đặt lịch bị gián đoạn", e);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
+    private AppointmentResponse executeCreateAppointment(String userEmail, AppointmentRequest request) {
         UserEntity customer = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin khách hàng"));
 
@@ -42,7 +77,6 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new RuntimeException("Chi nhánh hiện đang tạm ngừng hoạt động");
         }
 
-        // Gom danh sách ID dịch vụ (hỗ trợ cả serviceId đơn lẻ và serviceIds mảng)
         List<Long> serviceIds = new ArrayList<>();
         if (request.getServiceIds() != null && !request.getServiceIds().isEmpty()) {
             serviceIds.addAll(request.getServiceIds());
@@ -57,7 +91,6 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new RuntimeException("Dịch vụ không tồn tại");
         }
 
-        // Tính tổng thời lượng & tổng tiền từ danh sách dịch vụ
         int totalMinutes = selectedServices.stream()
                 .mapToInt(ServiceEntity::getDurationMinutes)
                 .sum();
@@ -108,7 +141,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         appointment.setDetails(detailList);
 
-        return mapToResponse(appointmentRepository.save(appointment));
+        AppointmentEntity saved = appointmentRepository.save(appointment);
+        emailNotificationService.sendBookingCreatedEmail(saved);
+        return mapToResponse(saved);
     }
 
     @Override
@@ -152,7 +187,9 @@ public class AppointmentServiceImpl implements AppointmentService {
             appointment.setNotes(oldNote + "Khách hủy: " + reason.trim());
         }
 
-        return mapToResponse(appointmentRepository.save(appointment));
+        AppointmentEntity saved = appointmentRepository.save(appointment);
+        emailNotificationService.sendStatusChangedEmail(saved, reason);
+        return mapToResponse(saved);
     }
 
     @Override
@@ -187,7 +224,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
 
         appointment.setStatus(upperStatus);
-        return mapToResponse(appointmentRepository.save(appointment));
+        AppointmentEntity saved = appointmentRepository.save(appointment);
+        emailNotificationService.sendStatusChangedEmail(saved, reason);
+        return mapToResponse(saved);
     }
 
     @Override

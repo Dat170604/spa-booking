@@ -79,4 +79,21 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
             @Param("date") LocalDate date,
             Pageable pageable
     );
+
+    @Query("""
+    SELECT DISTINCT a FROM AppointmentEntity a
+    LEFT JOIN FETCH a.customer
+    LEFT JOIN FETCH a.branch
+    LEFT JOIN FETCH a.details d
+    LEFT JOIN FETCH d.service
+    WHERE a.appointmentDate = :today
+      AND a.status IN ('PENDING', 'CONFIRMED')
+      AND a.isReminded = false
+      AND a.startTime BETWEEN :fromTime AND :toTime
+""")
+    List<AppointmentEntity> findAppointmentsToRemind(
+            @Param("today") LocalDate today,
+            @Param("fromTime") LocalTime fromTime,
+            @Param("toTime") LocalTime toTime
+    );
 }

@@ -3,7 +3,7 @@ package com.spa.spabookingservice.dto.common;
 import lombok.Builder;
 import org.slf4j.MDC;
 import com.spa.spabookingservice.exception.ErrorCode;
-import com.spa.spabookingservice.util.TraceIdFilter;
+import com.spa.spabookingservice.security.TraceIdFilter;
 
 import java.time.Instant;
 import java.util.List;

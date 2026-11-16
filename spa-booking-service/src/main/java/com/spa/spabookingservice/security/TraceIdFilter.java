@@ -1,4 +1,4 @@
-package com.spa.spabookingservice.util;
+package com.spa.spabookingservice.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

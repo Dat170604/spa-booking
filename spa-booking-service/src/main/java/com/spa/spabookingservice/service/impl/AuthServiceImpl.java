@@ -170,9 +170,42 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public void logout(String bearerToken, String refreshToken) {
+        // 1. Thu hồi Access Token ngay lập tức bằng Redis Blacklist
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            String accessToken = bearerToken.substring(7);
+            long remainingMs = jwtTokenProvider.getRemainingExpirationMs(accessToken);
+            if (remainingMs > 0) {
+                redisTemplate.opsForValue().set(
+                        "jwt:blacklist:" + accessToken,
+                        "revoked",
+                        remainingMs,
+                        TimeUnit.MILLISECONDS
+                );
+            }
+        }
+
+        // 2. Đánh dấu revoked = true cho Refresh Token trong PostgreSQL (giữ lại log audit)
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            refreshTokenRepository.findByToken(refreshToken)
+                    .ifPresent(token -> {
+                        token.setRevoked(true);
+                        refreshTokenRepository.save(token);
+                    });
+        }
+    }
+
+    @Override
+    @Transactional
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         return refreshTokenRepository.findByToken(request.getRefreshToken())
-                .map(refreshTokenService::verifyExpiration)
+                .map(token -> {
+                    // Chặn nếu Refresh Token đã bị đánh dấu revoked khi logout
+                    if (token.isRevoked()) {
+                        throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN, "Refresh token đã bị thu hồi");
+                    }
+                    return refreshTokenService.verifyExpiration(token);
+                })
                 .map(RefreshTokenEntity::getUser)
                 .map(user -> {
                     String newAccessToken = jwtTokenProvider.generateAccessToken(user.getEmail());

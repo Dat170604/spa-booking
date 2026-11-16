@@ -75,4 +75,14 @@ public class JwtTokenProvider {
         }
         return false;
     }
+
+    public long getRemainingExpirationMs(String token) {
+        Date expiration = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey()) // dùng key hiện tại của class bạn
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+        return expiration.getTime() - System.currentTimeMillis();
+    }
 }
