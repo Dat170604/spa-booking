@@ -1,9 +1,12 @@
-name: Build & Push Docker Images to Docker Hub
+name: Build, Test & Push Docker Images to Docker Hub
 
 on:
   push:
     branches:
       - main # Tự động chạy mỗi khi push hoặc merge vào nhánh main
+  pull_request:
+    branches:
+      - main # Chạy kiểm tra test khi tạo Pull Request vào main
   workflow_dispatch: # Cho phép bấm chạy thủ công trên giao diện GitHub
 
 env:
@@ -11,7 +14,47 @@ env:
   FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/lotus-spa-frontend
 
 jobs:
+  # JOB 1: Chạy Unit Test cho Backend trước
+  test-backend:
+    name: Run Backend Unit Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./spa-booking-service
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run Unit Tests
+        run: ./gradlew test
+
+      - name: Upload JUnit Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-junit-test-report
+          path: ./spa-booking-service/build/reports/tests/test/
+          retention-days: 7
+
+  # JOB 2: Chỉ chạy khi JOB 1 (test-backend) PASS và không phải sự kiện Pull Request
   build-and-push:
+    name: Build & Push Docker Images
+    needs: test-backend
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     steps:

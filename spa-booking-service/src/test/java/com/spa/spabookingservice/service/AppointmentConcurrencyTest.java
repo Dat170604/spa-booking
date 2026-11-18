@@ -1,6 +1,7 @@
 package com.spa.spabookingservice.service;
 
 import com.spa.spabookingservice.dto.appointment.AppointmentRequest;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest
+@Tag("integration")
 class AppointmentConcurrencyTest {
 
     @Autowired

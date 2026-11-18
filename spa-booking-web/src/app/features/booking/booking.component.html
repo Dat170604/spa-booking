@@ -110,11 +110,14 @@
               <label class="block text-sm font-semibold text-white">
                 Chọn khung giờ bắt đầu <span class="text-rose-400">*</span>
               </label>
-              <div *ngIf="bookingForm.get('staffId')?.value" class="flex items-center gap-3 text-[11px]">
+              <div class="flex flex-wrap items-center gap-3 text-[11px]">
                 <span class="flex items-center gap-1 text-slate-300">
                   <span class="w-2.5 h-2.5 rounded-sm bg-slate-950 border border-slate-700 inline-block"></span> Còn trống
                 </span>
-                <span class="flex items-center gap-1 text-rose-400">
+                <span class="flex items-center gap-1 text-slate-500">
+                  <span class="w-2.5 h-2.5 rounded-sm bg-slate-900 border border-slate-800 inline-block"></span> Đã qua giờ
+                </span>
+                <span *ngIf="bookingForm.get('staffId')?.value" class="flex items-center gap-1 text-rose-400">
                   <span class="w-2.5 h-2.5 rounded-sm bg-rose-950/60 border border-rose-800/60 inline-block"></span> KTV đã có lịch
                 </span>
               </div>
@@ -124,18 +127,22 @@
               <button
                 type="button"
                 *ngFor="let slot of timeSlots"
-                [disabled]="isSlotBusy(slot)"
+                [disabled]="isSlotBusy(slot) || isSlotPast(slot)"
                 (click)="selectTimeSlot(slot)"
                 [ngClass]="{
                   'bg-rose-950/40 text-rose-400/60 border-rose-900/50 cursor-not-allowed line-through': isSlotBusy(slot),
-                  'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-900/30 font-bold': !isSlotBusy(slot) && bookingForm.get('startTime')?.value === slot,
-                  'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600': !isSlotBusy(slot) && bookingForm.get('startTime')?.value !== slot
+                  'bg-slate-900/60 text-slate-600 border-slate-800/60 cursor-not-allowed line-through': !isSlotBusy(slot) && isSlotPast(slot),
+                  'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-900/30 font-bold': !isSlotBusy(slot) && !isSlotPast(slot) && bookingForm.get('startTime')?.value === slot,
+                  'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-600': !isSlotBusy(slot) && !isSlotPast(slot) && bookingForm.get('startTime')?.value !== slot
                 }"
                 class="py-2.5 px-2 rounded-xl border text-xs font-mono transition text-center flex flex-col items-center justify-center"
               >
                 <span>{{ slot }}</span>
                 <span *ngIf="isSlotBusy(slot)" class="text-[9px] font-sans no-underline text-rose-400 mt-0.5">
                   Đã bận
+                </span>
+                <span *ngIf="!isSlotBusy(slot) && isSlotPast(slot)" class="text-[9px] font-sans no-underline text-slate-500 mt-0.5">
+                  Đã qua
                 </span>
               </button>
             </div>
@@ -175,6 +182,17 @@
               {{ selectedBranch ? selectedBranch.name : 'Chưa chọn chi nhánh' }}
             </span>
             <p *ngIf="selectedBranch" class="text-xs text-slate-400 mt-0.5">{{ selectedBranch.address }}</p>
+          </div>
+
+          <!-- Hiển thị Kỹ thuật viên đã chọn -->
+          <div>
+            <span class="text-xs text-slate-400 block">Kỹ thuật viên</span>
+            <span *ngIf="selectedStaff" class="font-semibold text-emerald-400">
+              {{ selectedStaff.fullName }}
+            </span>
+            <span *ngIf="!selectedStaff" class="text-xs text-slate-300 italic">
+              Spa tự sắp xếp chuyên viên phù hợp
+            </span>
           </div>
 
           <div class="space-y-2">

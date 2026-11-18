@@ -6,8 +6,13 @@ import com.spa.spabookingservice.entity.ServiceEntity;
 import com.spa.spabookingservice.exception.AppException;
 import com.spa.spabookingservice.exception.ErrorCode;
 import com.spa.spabookingservice.repository.ServiceRepository;
+import com.spa.spabookingservice.service.FileStorageService;
 import com.spa.spabookingservice.service.ServiceService;
+import com.spa.spabookingservice.util.RestPage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,14 +31,16 @@ import java.util.UUID;
 public class ServiceServiceImpl implements ServiceService {
 
     private final ServiceRepository serviceRepository;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional
+    @CacheEvict(value = "service_search", allEntries = true)
     public ServiceResponse createService(ServiceRequest request) {
         ServiceEntity entity = ServiceEntity.builder()
                 .name(request.getName())
-                .category(request.getCategory()) // Bổ sung category
-                .imageUrl(request.getImageUrl()) // Bổ sung imageUrl
+                .category(request.getCategory())
+                .imageUrl(request.getImageUrl())
                 .description(request.getDescription())
                 .price(request.getPrice())
                 .durationMinutes(request.getDurationMinutes())
@@ -45,12 +52,16 @@ public class ServiceServiceImpl implements ServiceService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "service_search", allEntries = true),
+            @CacheEvict(value = "service_detail", key = "#id")
+    })
     public ServiceResponse updateService(Long id, ServiceRequest request) {
         ServiceEntity entity = serviceRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
         entity.setName(request.getName());
-        entity.setCategory(request.getCategory()); // Bổ sung category
-        entity.setImageUrl(request.getImageUrl()); // Bổ sung imageUrl
+        entity.setCategory(request.getCategory());
+        entity.setImageUrl(request.getImageUrl());
         entity.setDescription(request.getDescription());
         entity.setPrice(request.getPrice());
         entity.setDurationMinutes(request.getDurationMinutes());
@@ -63,6 +74,7 @@ public class ServiceServiceImpl implements ServiceService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "service_detail", key = "#id")
     public ServiceResponse getServiceById(Long id) {
         ServiceEntity entity = serviceRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
@@ -71,6 +83,10 @@ public class ServiceServiceImpl implements ServiceService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "service_search", allEntries = true),
+            @CacheEvict(value = "service_detail", key = "#id")
+    })
     public void deleteService(Long id) {
         ServiceEntity entity = serviceRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
@@ -78,13 +94,23 @@ public class ServiceServiceImpl implements ServiceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(
+            value = "service_search",
+            key = "(#keyword ?: 'all') + ':' + (#category ?: 'all') + ':' + #pageable.pageNumber + ':' + #pageable.pageSize"
+    )
     public Page<ServiceResponse> searchServices(String keyword, String category, Pageable pageable) {
-        return serviceRepository.searchServices(keyword, category, pageable)
+        Page<ServiceResponse> page = serviceRepository.searchServices(keyword, category, pageable)
                 .map(this::mapToResponse);
+        return new RestPage<>(page);
     }
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "service_search", allEntries = true),
+            @CacheEvict(value = "service_detail", key = "#id")
+    })
     public void toggleServiceStatus(Long id) {
         ServiceEntity service = serviceRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Không tìm thấy dịch vụ"));
@@ -94,36 +120,15 @@ public class ServiceServiceImpl implements ServiceService {
 
     @Override
     public String uploadServiceImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File ảnh không được để trống!");
-        }
-        try {
-            Path uploadPath = Paths.get("uploads/services");
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename != null && originalFilename.contains(".")
-                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                    : ".jpg";
-            String fileName = UUID.randomUUID() + extension;
-
-            Path filePath = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            return "http://localhost:8080/uploads/services/" + fileName;
-        } catch (IOException e) {
-            throw new RuntimeException("Lỗi lưu file ảnh: " + e.getMessage(), e);
-        }
+        return fileStorageService.uploadImage(file, "services");
     }
 
     private ServiceResponse mapToResponse(ServiceEntity entity) {
         return ServiceResponse.builder()
                 .id(entity.getId())
                 .name(entity.getName())
-                .category(entity.getCategory()) // Bổ sung category
-                .imageUrl(entity.getImageUrl()) // Bổ sung imageUrl
+                .category(entity.getCategory())
+                .imageUrl(entity.getImageUrl())
                 .description(entity.getDescription())
                 .price(entity.getPrice())
                 .durationMinutes(entity.getDurationMinutes())

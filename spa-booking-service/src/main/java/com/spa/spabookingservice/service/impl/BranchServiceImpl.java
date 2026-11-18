@@ -1,5 +1,6 @@
 package com.spa.spabookingservice.service.impl;
 
+import com.spa.spabookingservice.util.RestPage;
 import com.spa.spabookingservice.dto.branch.BranchRequest;
 import com.spa.spabookingservice.dto.branch.BranchResponse;
 import com.spa.spabookingservice.entity.BranchEntity;
@@ -7,20 +8,18 @@ import com.spa.spabookingservice.exception.AppException;
 import com.spa.spabookingservice.exception.ErrorCode;
 import com.spa.spabookingservice.repository.BranchRepository;
 import com.spa.spabookingservice.service.BranchService;
+import com.spa.spabookingservice.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,9 +27,14 @@ import java.util.stream.Collectors;
 public class BranchServiceImpl implements BranchService {
 
     private final BranchRepository branchRepository;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "active_branches", allEntries = true),
+            @CacheEvict(value = "branch_search", allEntries = true)
+    })
     public BranchResponse createBranch(BranchRequest request) {
         if (branchRepository.existsByName(request.getName())) {
             throw new AppException(ErrorCode.CONFLICT, "Tên chi nhánh đã tồn tại trên hệ thống");
@@ -53,6 +57,11 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "active_branches", allEntries = true),
+            @CacheEvict(value = "branch_search", allEntries = true),
+            @CacheEvict(value = "branch_detail", key = "#id")
+    })
     public BranchResponse updateBranch(Long id, BranchRequest request) {
         BranchEntity branch = branchRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Không tìm thấy chi nhánh"));
@@ -76,6 +85,7 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "branch_detail", key = "#id")
     public BranchResponse getBranchById(Long id) {
         BranchEntity branch = branchRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Không tìm thấy chi nhánh"));
@@ -84,6 +94,7 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "active_branches", key = "'all'")
     public List<BranchResponse> getAllActiveBranches() {
         return branchRepository.findByActiveTrue().stream()
                 .map(this::mapToResponse)
@@ -92,12 +103,23 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(
+            value = "branch_search",
+            key = "(#keyword ?: 'all') + ':' + #pageable.pageNumber + ':' + #pageable.pageSize"
+    )
     public Page<BranchResponse> searchBranches(String keyword, Pageable pageable) {
-        return branchRepository.searchBranches(keyword, pageable).map(this::mapToResponse);
+        Page<BranchResponse> page = branchRepository.searchBranches(keyword, pageable)
+                .map(this::mapToResponse);
+        return new RestPage<>(page);
     }
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "active_branches", allEntries = true),
+            @CacheEvict(value = "branch_search", allEntries = true),
+            @CacheEvict(value = "branch_detail", key = "#id")
+    })
     public void toggleBranchStatus(Long id) {
         BranchEntity branch = branchRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Không tìm thấy chi nhánh"));
@@ -107,10 +129,20 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "active_branches", allEntries = true),
+            @CacheEvict(value = "branch_search", allEntries = true),
+            @CacheEvict(value = "branch_detail", key = "#id")
+    })
     public void deleteBranch(Long id) {
         BranchEntity branch = branchRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Không tìm thấy chi nhánh"));
         branchRepository.delete(branch);
+    }
+
+    @Override
+    public String uploadBranchImage(MultipartFile file) {
+        return fileStorageService.uploadImage(file, "branches");
     }
 
     private BranchResponse mapToResponse(BranchEntity entity) {
@@ -126,31 +158,5 @@ public class BranchServiceImpl implements BranchService {
                 .closeTime(entity.getCloseTime())
                 .active(entity.isActive())
                 .build();
-    }
-
-    @Override
-    public String uploadBranchImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File ảnh chi nhánh không được để trống!");
-        }
-        try {
-            Path uploadPath = Paths.get("uploads/branches");
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename != null && originalFilename.contains(".")
-                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                    : ".jpg";
-            String fileName = UUID.randomUUID() + extension;
-
-            Path filePath = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            return "http://localhost:8080/uploads/branches/" + fileName;
-        } catch (IOException e) {
-            throw new RuntimeException("Lỗi lưu file ảnh chi nhánh: " + e.getMessage(), e);
-        }
     }
 }

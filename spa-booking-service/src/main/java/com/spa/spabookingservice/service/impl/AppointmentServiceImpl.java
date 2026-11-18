@@ -98,8 +98,17 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .map(ServiceEntity::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        LocalDate appointmentDate = request.getAppointmentDate();
         LocalTime startTime = request.getStartTime();
         LocalTime endTime = startTime.plusMinutes(totalMinutes);
+
+        // Chặn đặt lịch trong quá khứ hoặc quá sát giờ hiện tại (tối thiểu trước 30 phút)
+        LocalDateTime requestedDateTime = LocalDateTime.of(appointmentDate, startTime);
+        LocalDateTime earliestAllowedTime = LocalDateTime.now().plusMinutes(30);
+
+        if (requestedDateTime.isBefore(earliestAllowedTime)) {
+            throw new RuntimeException("Vui lòng chọn thời gian đặt lịch cách hiện tại ít nhất 30 phút!");
+        }
 
         if (branch.getOpenTime() != null && startTime.isBefore(branch.getOpenTime())) {
             throw new RuntimeException("Giờ đặt sớm hơn giờ mở cửa của chi nhánh (" + branch.getOpenTime() + ")");
@@ -230,23 +239,60 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
-    @Transactional
     public AppointmentResponse assignStaff(Long id, Long staffId) {
+        // Lấy thông tin ngày hẹn trước để xác định đúng ổ khóa Redis trùng khớp với createAppointment
+        AppointmentEntity preCheck = appointmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn"));
+
+        String lockKey = String.format("lock:booking:staff:%d:date:%s", staffId, preCheck.getAppointmentDate());
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            boolean isLocked = lock.tryLock(5, 10, TimeUnit.SECONDS);
+            if (!isLocked) {
+                throw new RuntimeException("Kỹ thuật viên này đang được xử lý lịch đặt khác, vui lòng thử lại sau vài giây!");
+            }
+
+            // Mở Transaction BÊN TRONG vùng khóa để đảm bảo COMMIT xong mới nhả khóa
+            return transactionTemplate.execute(status -> executeAssignStaff(id, staffId));
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Quá trình phân công kỹ thuật viên bị gián đoạn", e);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
+    private AppointmentResponse executeAssignStaff(Long id, Long staffId) {
+        // Query lại bên trong transaction để đảm bảo entity luôn ở trạng thái mới nhất (Managed)
         AppointmentEntity appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn"));
+
+        if (!List.of("PENDING", "CONFIRMED").contains(appointment.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể phân công kỹ thuật viên cho lịch hẹn đang chờ hoặc đã xác nhận");
+        }
+
         UserEntity staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy kỹ thuật viên"));
 
-        if (appointmentRepository.existsStaffConflict(staffId, appointment.getAppointmentDate(), appointment.getStartTime(), appointment.getEndTime())) {
+        if (appointmentRepository.existsStaffConflict(
+                staffId,
+                appointment.getAppointmentDate(),
+                appointment.getStartTime(),
+                appointment.getEndTime())) {
             throw new RuntimeException("Kỹ thuật viên này bị trùng lịch vào khung giờ trên");
         }
 
-        // Gán KTV cho các dịch vụ trong lịch hẹn
+        // Gán KTV cho tất cả dịch vụ trong lịch hẹn
         for (AppointmentDetailEntity detail : appointment.getDetails()) {
             detail.setStaff(staff);
         }
 
-        return mapToResponse(appointmentRepository.save(appointment));
+        AppointmentEntity saved = appointmentRepository.save(appointment);
+        return mapToResponse(saved);
     }
 
     @Override

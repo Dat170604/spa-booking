@@ -53,7 +53,7 @@ public class UserController {
     }
 
     @GetMapping("/staff/branch/{branchId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<UserResponse>> getStaffByBranch(@PathVariable Long branchId) {
         return ResponseEntity.ok(userService.getStaffByBranch(branchId));
     }

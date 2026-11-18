@@ -59,8 +59,17 @@ dependencies {
     implementation 'com.bucket4j:bucket4j_jdk17-redis-common:8.14.0'
     implementation 'com.bucket4j:bucket4j_jdk17-lettuce:8.14.0'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'com.cloudinary:cloudinary-http44:1.39.0'
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'integration' // Mặc định ./gradlew test bỏ qua các test cần DB/Redis thật
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    useJUnitPlatform {
+        includeTags 'integration' // Chạy riêng khi bật Docker PostgreSQL & Redis
+    }
 }

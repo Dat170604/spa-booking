@@ -23,7 +23,7 @@ export class BookingComponent implements OnInit {
   busyRanges: { startTime: string; endTime: string }[] = [];
   timeSlots: string[] = [];
 
-  minDate: string = '';
+  minDate: string = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD theo giờ địa phương
   isSubmitting = false;
   errorMessage = '';
 
@@ -39,11 +39,10 @@ export class BookingComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const today = new Date();
-    this.minDate = today.toISOString().split('T')[0];
+    this.minDate = new Date().toLocaleDateString('en-CA');
 
     this.initForm();
-    this.generateTimeSlots(); // Sinh khung giờ mặc định ban đầu
+    this.generateTimeSlots();
     this.loadInitialData();
   }
 
@@ -105,7 +104,6 @@ export class BookingComponent implements OnInit {
     const startMinutes = this.toMinutes(openStr);
     const closeMinutes = this.toMinutes(closeStr);
 
-    // Thời lượng dịch vụ (nếu chưa chọn thì mặc định 30 phút để hiển thị các khung giờ hợp lệ)
     const serviceDuration = this.totalDuration > 0 ? this.totalDuration : 30;
     const lastPossibleStart = closeMinutes - serviceDuration;
 
@@ -118,13 +116,11 @@ export class BookingComponent implements OnInit {
     this.validateSelectedSlot();
   }
 
-  // Chuyển chuỗi "HH:mm" thành tổng số phút tính từ 00:00
   private toMinutes(timeStr: string): number {
     const [h, m] = timeStr.slice(0, 5).split(':').map(Number);
     return h * 60 + m;
   }
 
-  // Chuyển tổng số phút thành chuỗi "HH:mm"
   private fromMinutes(totalMinutes: number): string {
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
@@ -138,7 +134,6 @@ export class BookingComponent implements OnInit {
     } else {
       this.selectedServiceIds.push(serviceId);
     }
-    // Cập nhật lại danh sách khung giờ vì tổng thời lượng dịch vụ vừa thay đổi
     this.generateTimeSlots();
   }
 
@@ -160,6 +155,9 @@ export class BookingComponent implements OnInit {
   }
 
   onStaffOrDateChange(): void {
+    // Kiểm tra ngay nếu giờ đang chọn bị lùi vào quá khứ sau khi đổi ngày -> reset
+    this.validateSelectedSlot();
+
     const staffId = this.bookingForm.get('staffId')?.value;
     const date = this.bookingForm.get('appointmentDate')?.value;
 
@@ -180,6 +178,31 @@ export class BookingComponent implements OnInit {
     });
   }
 
+  // Kiểm tra khung giờ đã qua hoặc quá sát giờ hiện tại (dưới 30 phút)
+  isSlotPast(slot: string): boolean {
+    const selectedDate: string | null = this.bookingForm.get('appointmentDate')?.value;
+    if (!selectedDate) return false;
+
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+
+    if (selectedDate > todayStr) return false;
+    if (selectedDate < todayStr) return true;
+
+    const [hours, minutes] = slot.split(':').map(Number);
+    const slotDateTime = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      hours,
+      minutes,
+      0
+    );
+
+    const minAllowedTime = new Date(now.getTime() + 30 * 60 * 1000);
+    return slotDateTime < minAllowedTime;
+  }
+
   // Kiểm tra khung giờ này có bị trùng với lịch bận của KTV không
   isSlotBusy(slot: string): boolean {
     if (!this.bookingForm.get('staffId')?.value || this.busyRanges.length === 0) {
@@ -197,10 +220,13 @@ export class BookingComponent implements OnInit {
     });
   }
 
-  // Nếu giờ đang chọn không còn nằm trong timeSlots hoặc bị trùng lịch KTV thì tự động bỏ chọn
+  // Nếu giờ đang chọn không hợp lệ (ngoài giờ mở cửa, đã qua, hoặc KTV bận) thì tự động bỏ chọn
   private validateSelectedSlot(): void {
     const currentSlot = this.bookingForm.get('startTime')?.value;
-    if (currentSlot && (!this.timeSlots.includes(currentSlot) || this.isSlotBusy(currentSlot))) {
+    if (
+      currentSlot &&
+      (!this.timeSlots.includes(currentSlot) || this.isSlotBusy(currentSlot) || this.isSlotPast(currentSlot))
+    ) {
       this.bookingForm.patchValue({ startTime: '' });
     }
   }
@@ -218,13 +244,19 @@ export class BookingComponent implements OnInit {
   }
 
   selectTimeSlot(time: string): void {
-    if (this.isSlotBusy(time)) return;
+    if (this.isSlotBusy(time) || this.isSlotPast(time)) return;
     this.bookingForm.patchValue({ startTime: time });
   }
 
   get selectedBranch(): any {
     const id = Number(this.bookingForm.get('branchId')?.value);
     return this.branches.find((b) => b.id === id);
+  }
+
+  get selectedStaff(): any {
+    const id = this.bookingForm.get('staffId')?.value;
+    if (!id) return null;
+    return this.staffList.find((st) => st.id === Number(id)) || null;
   }
 
   get selectedServicesList(): any[] {
