@@ -4,16 +4,16 @@ services:
     container_name: lotus-spa-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      TZ: ${TZ}
+      POSTGRES_DB: ${DB_NAME:-spa_booking_db}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dat170604}
+      TZ: ${TZ:-Asia/Ho_Chi_Minh}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-spa_booking_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,10 +37,7 @@ services:
       - spa-network
 
   backend:
-    image: ${DOCKERHUB_USERNAME}/lotus-spa-backend:latest
-    build:
-      context: ./spa-booking-service
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-dat170604}/lotus-spa-backend:latest
     container_name: lotus-spa-backend
     restart: unless-stopped
     depends_on:
@@ -48,14 +45,39 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file:
-      - ./.env
     environment:
-      # Ghi đè host kết nối sang tên container trong mạng Docker
-      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      TZ: ${TZ:-Asia/Ho_Chi_Minh}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+
+      # Database & Redis trong mạng nội bộ Docker
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-spa_booking_db}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-dat170604}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      TZ: ${TZ}
+
+      # Tài khoản Admin khởi tạo mặc định
+      ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-Administrator}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@spa.com}
+      ADMIN_PHONE: ${ADMIN_PHONE:-0999999999}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin@123}
+
+      # JWT Security
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-900000}
+      REFRESH_TOKEN_EXPIRATION_MS: ${REFRESH_TOKEN_EXPIRATION_MS:-604800000}
+
+      # CORS
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:4200}
+
+      # Email & Cloudinary (Tùy chọn - có thể cấu hình thêm trong file .env)
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     ports:
       - "${SERVER_PORT:-8080}:8080"
     volumes:
@@ -70,10 +92,7 @@ services:
       - spa-network
 
   frontend:
-    image: ${DOCKERHUB_USERNAME}/lotus-spa-frontend:latest
-    build:
-      context: ./spa-booking-web
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME:-dat170604}/lotus-spa-frontend:latest
     container_name: lotus-spa-frontend
     restart: unless-stopped
     depends_on:

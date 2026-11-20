@@ -56,7 +56,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
     SELECT DISTINCT a FROM AppointmentEntity a
     JOIN a.details d
     WHERE d.staff.id = :staffId
-      AND a.appointmentDate = :date
+      AND a.appointmentDate = :date 
       AND a.status NOT IN ('CANCELLED')
     """)
     List<AppointmentEntity> findActiveAppointmentsByStaffAndDate(
@@ -95,5 +95,16 @@ public interface AppointmentRepository extends JpaRepository<AppointmentEntity, 
             @Param("today") LocalDate today,
             @Param("fromTime") LocalTime fromTime,
             @Param("toTime") LocalTime toTime
+    );
+
+    // Tìm các lịch hẹn đã qua ngày hẹn (hoặc qua giờ hẹn hôm nay) nhưng vẫn treo ở trạng thái PENDING hoặc CONFIRMED
+    @Query("""
+            SELECT a FROM AppointmentEntity a
+            WHERE a.status IN ('PENDING', 'CONFIRMED')
+              AND (a.appointmentDate < :today OR (a.appointmentDate = :today AND a.endTime < :nowTime))
+            """)
+    List<AppointmentEntity> findOverdueAppointments(
+            @Param("today") LocalDate today,
+            @Param("nowTime") LocalTime nowTime
     );
 }

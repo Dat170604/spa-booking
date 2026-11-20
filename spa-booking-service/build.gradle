@@ -53,13 +53,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.flywaydb:flyway-core'
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'org.redisson:redisson:3.45.1'
     implementation 'com.bucket4j:bucket4j_jdk17-core:8.14.0'
     implementation 'com.bucket4j:bucket4j_jdk17-redis-common:8.14.0'
     implementation 'com.bucket4j:bucket4j_jdk17-lettuce:8.14.0'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'com.cloudinary:cloudinary-http44:1.39.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 }
 
 tasks.named('test') {

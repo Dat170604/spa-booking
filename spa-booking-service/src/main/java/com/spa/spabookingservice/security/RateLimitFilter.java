@@ -39,12 +39,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        // Áp dụng giới hạn cho API đăng nhập, đăng ký và tạo lịch hẹn
-        boolean isProtectedEndpoint = path.startsWith("/api/auth/login")
-                || path.startsWith("/api/auth/register")
-                || (path.startsWith("/api/appointments") && "POST".equalsIgnoreCase(method));
+        // Cập nhật đúng prefix /api/v1/... theo hệ thống của bạn
+        boolean isProtectedEndpoint = path.startsWith("/api/v1/auth/login")
+                || path.startsWith("/api/v1/auth/register")
+                || (path.startsWith("/api/v1/appointments") && "POST".equalsIgnoreCase(method));
 
         if (isProtectedEndpoint) {
+            // Tránh phình RAM nếu có quá nhiều IP rác quét liên tục
+            if (buckets.size() > 10_000) {
+                buckets.clear();
+            }
+
             String clientIp = getClientIp(request);
             Bucket bucket = buckets.computeIfAbsent(clientIp + ":" + path, k -> createBucket());
 
@@ -60,7 +65,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        // Lấy đúng IP thật của khách nếu chạy qua Nginx Reverse Proxy
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isBlank()) {
             return xForwardedFor.split(",")[0].trim();

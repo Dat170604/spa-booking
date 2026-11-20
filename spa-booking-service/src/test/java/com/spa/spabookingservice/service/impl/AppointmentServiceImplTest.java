@@ -37,6 +37,7 @@ class AppointmentServiceImplTest {
     @Mock private UserRepository userRepository;
     @Mock private BranchRepository branchRepository;
     @Mock private ServiceRepository serviceRepository;
+    @Mock private StaffLeaveRepository staffLeaveRepository;
     @Mock private RedissonClient redissonClient;
     @Mock private TransactionTemplate transactionTemplate;
     @Mock private EmailNotificationService emailNotificationService;
@@ -175,8 +176,8 @@ class AppointmentServiceImplTest {
         AppointmentRequest req = new AppointmentRequest();
         req.setBranchId(10L);
         req.setServiceId(100L);
-        req.setAppointmentDate(LocalDate.now());
-        req.setStartTime(LocalTime.now().minusMinutes(10)); // Giờ đã qua
+        req.setAppointmentDate(LocalDate.now().minusDays(1));
+        req.setStartTime(LocalTime.of(10, 0));
 
         when(userRepository.findByEmail("khach@spa.com")).thenReturn(Optional.of(customer));
         when(branchRepository.findById(10L)).thenReturn(Optional.of(branch));
@@ -186,6 +187,33 @@ class AppointmentServiceImplTest {
                 () -> appointmentService.createAppointment("khach@spa.com", req));
 
         assertTrue(ex.getMessage().contains("ít nhất 30 phút"));
+        verify(rLock).unlock();
+    }
+
+    @Test
+    @DisplayName("6. Phân công KTV thất bại: KTV đang nghỉ phép trong khung giờ hẹn")
+    void assignStaff_FailWhenStaffOnLeave() throws InterruptedException {
+        mockLockAndTx();
+        LocalDate date = LocalDate.now().plusDays(2);
+        AppointmentEntity appointment = AppointmentEntity.builder()
+                .id(78L)
+                .customer(customer)
+                .branch(branch)
+                .appointmentDate(date)
+                .startTime(LocalTime.of(14, 0))
+                .endTime(LocalTime.of(15, 0))
+                .status("PENDING")
+                .build();
+
+        when(appointmentRepository.findById(78L)).thenReturn(Optional.of(appointment));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
+        when(staffLeaveRepository.isStaffOnLeave(2L, date, LocalTime.of(14, 0), LocalTime.of(15, 0)))
+                .thenReturn(true);
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> appointmentService.assignStaff(78L, 2L));
+
+        assertTrue(ex.getMessage().contains("nghỉ phép"));
         verify(rLock).unlock();
     }
 }

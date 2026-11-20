@@ -33,6 +33,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final ServiceRepository serviceRepository;
+    private final StaffLeaveRepository staffLeaveRepository;
     private final RedissonClient redissonClient;
     private final TransactionTemplate transactionTemplate;
     private final EmailNotificationService emailNotificationService;
@@ -124,6 +125,10 @@ public class AppointmentServiceImpl implements AppointmentService {
 
             if (appointmentRepository.existsStaffConflict(staff.getId(), request.getAppointmentDate(), startTime, endTime)) {
                 throw new RuntimeException("Kỹ thuật viên này đã có lịch hẹn trong khung giờ bạn chọn!");
+            }
+
+            if (staffLeaveRepository.isStaffOnLeave(staff.getId(), appointmentDate, startTime, endTime)) {
+                throw new RuntimeException("Kỹ thuật viên đang nghỉ phép trong khung giờ này. Vui lòng chọn chuyên viên hoặc khung giờ khác!");
             }
         }
 
@@ -278,6 +283,16 @@ public class AppointmentServiceImpl implements AppointmentService {
         UserEntity staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy kỹ thuật viên"));
 
+        // 1. Kiểm tra KTV có đang nghỉ phép trong khung giờ này không
+        if (staffLeaveRepository.isStaffOnLeave(
+                staffId,
+                appointment.getAppointmentDate(),
+                appointment.getStartTime(),
+                appointment.getEndTime())) {
+            throw new RuntimeException("Kỹ thuật viên này đang nghỉ phép vào khung giờ trên");
+        }
+
+        // 2. Kiểm tra KTV có bị trùng lịch hẹn khác không
         if (appointmentRepository.existsStaffConflict(
                 staffId,
                 appointment.getAppointmentDate(),
@@ -296,11 +311,29 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AppointmentResponse> getStaffBusySlots(Long staffId, LocalDate date) {
-        return appointmentRepository.findActiveAppointmentsByStaffAndDate(staffId, date)
+        // 1. Lấy danh sách lịch hẹn đang hoạt động của KTV trong ngày
+        List<AppointmentResponse> busySlots = appointmentRepository.findActiveAppointmentsByStaffAndDate(staffId, date)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+
+        // 2. Gộp thêm các khoảng thời gian KTV nghỉ phép đã được duyệt (APPROVED)
+        List<StaffLeaveEntity> approvedLeaves = staffLeaveRepository
+                .findByStaffIdAndLeaveDateAndStatus(staffId, date, "APPROVED");
+
+        for (StaffLeaveEntity leave : approvedLeaves) {
+            AppointmentResponse leaveSlot = AppointmentResponse.builder()
+                    .startTime(leave.isFullDay() ? LocalTime.of(0, 0) : leave.getStartTime())
+                    .endTime(leave.isFullDay() ? LocalTime.of(23, 59) : leave.getEndTime())
+                    .status("LEAVE")
+                    .notes(leave.getReason() != null ? "KTV nghỉ phép: " + leave.getReason() : "KTV nghỉ phép")
+                    .build();
+            busySlots.add(leaveSlot);
+        }
+
+        return busySlots;
     }
 
     @Override
