@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { StaffScheduleComponent } from './features/staff/staff-schedule/staff-schedule.component';
 
 export const routes: Routes = [
   // ==================== 1. CÁC TRANG PUBLIC (KHÁCH VÃNG LAI XEM ĐƯỢC) ====================
@@ -49,7 +50,7 @@ export const routes: Routes = [
   {
     path: 'admin',
     loadComponent: () =>
-      import('./features/admin/layout/layout.component').then((m) => m.LayoutComponent),
+      import('./shared/layout/layout.component').then((m) => m.LayoutComponent),
     canActivate: [adminGuard],
     children: [
       {
@@ -93,7 +94,7 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'staff',
+        path: 'staffs',
         loadComponent: () =>
           import('./features/admin/staff/staff.component').then((m) => m.StaffManagementComponent),
       },
@@ -105,10 +106,38 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'my-schedule',
+        path: 'staff-leaves', // Đường dẫn /admin/staff-leaves
         loadComponent: () =>
-          import('./features/admin/staff-schedule/staff-schedule.component').then(
+          import('./features/admin/admin-staff-leave/admin-staff-leave.component').then(
+            (m) => m.AdminStaffLeaveComponent,
+          ),
+      },
+    ],
+  },
+
+  {
+    path: 'staff',
+    loadComponent: () =>
+      import('./shared/layout/layout.component').then((m) => m.LayoutComponent),
+    canActivate: [adminGuard], // Giữ nguyên guard của bạn
+    children: [
+      {
+        path: '',
+        redirectTo: 'my-schedule',
+        pathMatch: 'full',
+      },
+      {
+        path: 'my-schedule', // Đường dẫn /staff/my-schedule
+        loadComponent: () =>
+          import('./features/staff/staff-schedule/staff-schedule.component').then(
             (m) => m.StaffScheduleComponent,
+          ),
+      },
+      {
+        path: 'leaves', // Đường dẫn /staff/leaves
+        loadComponent: () =>
+          import('./features/staff/staff-leave/staff-leave.component').then(
+            (m) => m.StaffLeaveComponent,
           ),
       },
     ],

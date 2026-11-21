@@ -41,7 +41,7 @@
 
         <!-- Khi ĐÃ ĐĂNG NHẬP -->
         <ng-container *ngIf="isLoggedIn">
-          <a *ngIf="isAdmin || isStaff" [routerLink]="isAdmin ? '/admin/dashboard' : '/admin/my-schedule'"
+          <a *ngIf="isAdmin || isStaff" [routerLink]="isAdmin ? '/admin/dashboard' : '/staff/my-schedule'"
              class="bg-amber-100 text-amber-800 hover:bg-amber-200 text-xs font-semibold px-3 py-1.5 rounded-full transition">
             ⚙️ Trang quản trị
           </a>
@@ -85,13 +85,13 @@
     <a routerLink="/booking" class="block text-emerald-600 font-semibold py-1">Đặt lịch ngay</a>
 
     <div *ngIf="!isLoggedIn" class="pt-2 border-t border-gray-200 flex flex-col gap-2">
-      <a routerLink="/auth/login" class="w-full text-center py-2 border border-emerald-600 text-emerald-600 font-medium rounded-lg">Đăng nhập</a>
-      <a routerLink="/auth/register" class="w-full text-center py-2 bg-emerald-600 text-white font-medium rounded-lg">Đăng ký</a>
+      <a routerLink="/login" class="w-full text-center py-2 border border-emerald-600 text-emerald-600 font-medium rounded-lg">Đăng nhập</a>
+      <a routerLink="/register" class="w-full text-center py-2 bg-emerald-600 text-white font-medium rounded-lg">Đăng ký</a>
     </div>
 
     <div *ngIf="isLoggedIn" class="pt-2 border-t border-gray-200 space-y-2">
       <p class="font-bold text-gray-800">{{ currentUser?.fullName }}</p>
-      <a *ngIf="isAdmin || isStaff" routerLink="/admin/dashboard" class="block text-amber-600 font-medium">Trang quản trị</a>
+      <a *ngIf="isAdmin || isStaff" [routerLink]="isAdmin ? '/admin/dashboard' : '/staff'" class="block text-amber-600 font-medium">Trang quản trị</a>
       <button (click)="logout()" class="block text-red-600 font-medium">Đăng xuất</button>
     </div>
   </div>

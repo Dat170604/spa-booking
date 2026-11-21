@@ -7,8 +7,8 @@ import java.util.List;
 
 public interface StaffLeaveService {
 
-
     StaffLeaveResponse createLeave(String callerEmail, boolean isAdmin, StaffLeaveRequest req);
+
     StaffLeaveResponse updateStatus(Long leaveId, String status);
 
     List<StaffLeaveResponse> getMyLeaves(String email);

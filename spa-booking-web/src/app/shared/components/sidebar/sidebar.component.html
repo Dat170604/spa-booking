@@ -25,32 +25,53 @@
     </div>
 
     <!-- Navigation Menu List -->
-    <nav class="p-3 space-y-1.5">
-      <!-- Sửa *for thành *ngFor -->
-      <ng-container *ngFor="let item of menuItems">
+    <nav class="p-3 space-y-4">
+      <!-- KHU VỰC QUẢN TRỊ (ADMIN) -->
+      <div *ngIf="hasRole('ROLE_ADMIN')" class="space-y-1.5">
+        <div *ngIf="!isCollapsed" class="px-3.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          Quản trị hệ thống
+        </div>
         <a
-          *ngIf="hasPermission(item.roles)"
+          *ngFor="let item of adminMenuItems"
           [routerLink]="item.route"
           routerLinkActive="active-link"
           [routerLinkActiveOptions]="{ exact: false }"
           class="nav-item group flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-slate-800 hover:text-white"
           [title]="isCollapsed ? item.label : ''"
         >
-          <!-- Dynamic SVG Icon -->
           <svg class="w-5 h-5 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" [attr.d]="item.icon"/>
           </svg>
-
-          <!-- Label Menu -->
-          <span *ngIf="!isCollapsed" class="truncate tracking-wide">
-        {{ item.label }}
-      </span>
+          <span *ngIf="!isCollapsed" class="truncate tracking-wide">{{ item.label }}</span>
         </a>
-      </ng-container>
+      </div>
+
+      <!-- Đường kẻ ngăn cách giữa 2 phân khu (nếu user có cả 2 quyền) -->
+      <div *ngIf="hasRole('ROLE_ADMIN') && hasRole('ROLE_STAFF')" class="border-t border-slate-800/80"></div>
+
+      <!-- KHU VỰC NHÂN VIÊN (STAFF) -->
+      <div *ngIf="hasRole('ROLE_STAFF')" class="space-y-1.5">
+        <div *ngIf="!isCollapsed" class="px-3.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          Kỹ thuật viên (Staff)
+        </div>
+        <a
+          *ngFor="let item of staffMenuItems"
+          [routerLink]="item.route"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: item.route === '/staff' }"
+          class="nav-item group flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-slate-800 hover:text-white"
+          [title]="isCollapsed ? item.label : ''"
+        >
+          <svg class="w-5 h-5 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" [attr.d]="item.icon"/>
+          </svg>
+          <span *ngIf="!isCollapsed" class="truncate tracking-wide">{{ item.label }}</span>
+        </a>
+      </div>
     </nav>
   </div>
 
-  <!-- Footer Info / User Roles Info (Chỉ hiện khi mở rộng) -->
+  <!-- Footer Info -->
   <div *ngIf="!isCollapsed" class="p-4 border-t border-slate-800/80">
     <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 text-xs space-y-1">
       <div class="text-slate-400">Quyền truy cập:</div>

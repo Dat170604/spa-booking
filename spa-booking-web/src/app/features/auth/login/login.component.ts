@@ -53,6 +53,8 @@ export class LoginComponent implements OnInit {
         // Điều hướng theo Role
         if (roles.includes('ROLE_ADMIN')) {
           this.router.navigate(['/admin']);
+        } else if (roles.includes('ROLE_STAFF')) {
+          this.router.navigate(['/staff']);
         } else {
           this.router.navigate(['/']);
         }
