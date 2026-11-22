@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.Map;
 
 @Configuration
-public class CloudinaryConfig {
+    public class CloudinaryConfig {
 
     @Value("${cloudinary.cloud-name}")
     private String cloudName;

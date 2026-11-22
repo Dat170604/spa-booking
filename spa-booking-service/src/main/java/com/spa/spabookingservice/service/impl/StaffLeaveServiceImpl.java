@@ -7,6 +7,7 @@ import com.spa.spabookingservice.entity.UserEntity;
 import com.spa.spabookingservice.repository.AppointmentRepository;
 import com.spa.spabookingservice.repository.StaffLeaveRepository;
 import com.spa.spabookingservice.repository.UserRepository;
+import com.spa.spabookingservice.service.NotificationService;
 import com.spa.spabookingservice.service.StaffLeaveService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class StaffLeaveServiceImpl implements StaffLeaveService {
     private final StaffLeaveRepository staffLeaveRepository;
     private final UserRepository userRepository;
     private final AppointmentRepository appointmentRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public StaffLeaveResponse createLeave(String callerEmail, boolean isAdmin, StaffLeaveRequest req) {
@@ -60,6 +62,15 @@ public class StaffLeaveServiceImpl implements StaffLeaveService {
                 .status(isAdmin ? "APPROVED" : "PENDING")
                 .build();
 
+        if (!isAdmin) {
+            notificationService.sendToAllAdmins(
+                    "Đơn xin nghỉ phép mới",
+                    targetStaff.getFullName() + " vừa gửi đơn xin nghỉ ngày " + req.getLeaveDate(),
+                    "LEAVE_REQUEST",
+                    "/admin/staff-leaves"
+            );
+        }
+
         return toResponse(staffLeaveRepository.save(entity));
     }
 
@@ -68,6 +79,16 @@ public class StaffLeaveServiceImpl implements StaffLeaveService {
         StaffLeaveEntity entity = staffLeaveRepository.findById(leaveId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn nghỉ phép"));
         entity.setStatus(status.toUpperCase());
+
+        String statusText = "APPROVED".equals(entity.getStatus()) ? "được phê duyệt" : "bị từ chối";
+        notificationService.sendToUser(
+                entity.getStaff().getEmail(),
+                "Cập nhật đơn nghỉ phép",
+                "Đơn xin nghỉ ngày " + entity.getLeaveDate() + " của bạn đã " + statusText + ".",
+                "LEAVE_STATUS",
+                "/staff/leaves"
+        );
+
         return toResponse(staffLeaveRepository.save(entity));
     }
 

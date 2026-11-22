@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
-import { StaffScheduleComponent } from './features/staff/staff-schedule/staff-schedule.component';
+import {ProfileComponent} from "./features/profile/profile.component";
 
 export const routes: Routes = [
   // ==================== 1. CÁC TRANG PUBLIC (KHÁCH VÃNG LAI XEM ĐƯỢC) ====================
@@ -31,6 +31,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
   },
+  {
+    path: 'profile',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/profile/profile.component').then((m) => m.ProfileComponent),
+  },
 
   // ==================== 3. CÁC TRANG KHÁCH HÀNG (YÊU CẦU ĐĂNG NHẬP) ====================
   {
@@ -49,8 +55,7 @@ export const routes: Routes = [
   // Trang Quản trị ADMIN (Yêu cầu đăng nhập & Role ADMIN/STAFF)
   {
     path: 'admin',
-    loadComponent: () =>
-      import('./shared/layout/layout.component').then((m) => m.LayoutComponent),
+    loadComponent: () => import('./shared/layout/layout.component').then((m) => m.LayoutComponent),
     canActivate: [adminGuard],
     children: [
       {
@@ -117,8 +122,7 @@ export const routes: Routes = [
 
   {
     path: 'staff',
-    loadComponent: () =>
-      import('./shared/layout/layout.component').then((m) => m.LayoutComponent),
+    loadComponent: () => import('./shared/layout/layout.component').then((m) => m.LayoutComponent),
     canActivate: [adminGuard], // Giữ nguyên guard của bạn
     children: [
       {

@@ -6,6 +6,7 @@ import com.spa.spabookingservice.entity.*;
 import com.spa.spabookingservice.repository.*;
 import com.spa.spabookingservice.service.AppointmentService;
 import com.spa.spabookingservice.service.EmailNotificationService;
+import com.spa.spabookingservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -21,7 +22,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -37,25 +37,25 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final RedissonClient redissonClient;
     private final TransactionTemplate transactionTemplate;
     private final EmailNotificationService emailNotificationService;
+    private final NotificationService notificationService;
 
     @Override
     public AppointmentResponse createAppointment(String userEmail, AppointmentRequest request) {
-        // Nếu khách chọn KTV cụ thể -> khóa theo KTV + Ngày; nếu không chọn -> khóa theo Chi nhánh + Ngày
         String lockKey = (request.getStaffId() != null)
                 ? String.format("lock:booking:staff:%d:date:%s", request.getStaffId(), request.getAppointmentDate())
                 : String.format("lock:booking:branch:%d:date:%s", request.getBranchId(), request.getAppointmentDate());
 
         RLock lock = redissonClient.getLock(lockKey);
+        AppointmentEntity saved;
 
         try {
-            // Chờ tối đa 5s để lấy khóa, tự động nhả sau 10s nếu có sự cố
             boolean isLocked = lock.tryLock(5, 10, TimeUnit.SECONDS);
             if (!isLocked) {
                 throw new RuntimeException("Hệ thống đang xử lý lịch đặt cho khung giờ này, vui lòng thử lại sau vài giây!");
             }
 
-            // Mở Transaction BÊN TRONG vùng khóa để đảm bảo COMMIT xong mới nhả khóa
-            return transactionTemplate.execute(status -> executeCreateAppointment(userEmail, request));
+            // 1. Thực thi và COMMIT transaction lưu lịch hẹn trước
+            saved = transactionTemplate.execute(status -> executeCreateAppointment(userEmail, request));
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -65,9 +65,42 @@ public class AppointmentServiceImpl implements AppointmentService {
                 lock.unlock();
             }
         }
+
+        if (saved == null) {
+            throw new RuntimeException("Không thể tạo lịch hẹn, vui lòng thử lại!");
+        }
+
+        // 2. Sau khi DB đã COMMIT thành công -> gửi Email & Thông báo Real-time
+        emailNotificationService.sendBookingCreatedEmail(saved);
+
+        String combinedServiceNames = saved.getDetails().stream()
+                .map(d -> d.getService().getName())
+                .collect(Collectors.joining(", "));
+        String timeInfo = saved.getStartTime().toString().substring(0, 5) + " ngày " + saved.getAppointmentDate();
+        String customerName = saved.getCustomer().getFullName();
+
+        notificationService.sendToAllAdmins(
+                "Lịch hẹn mới từ khách hàng",
+                String.format("Khách %s vừa đặt dịch vụ \"%s\" lúc %s.", customerName, combinedServiceNames, timeInfo),
+                "BOOKING_CREATED",
+                "/admin/dashboard"
+        );
+
+        UserEntity assignedStaff = getAssignedStaff(saved);
+        if (assignedStaff != null) {
+            notificationService.sendToUser(
+                    assignedStaff.getEmail(),
+                    "Bạn có lịch hẹn mới",
+                    String.format("Khách %s đã đặt lịch dịch vụ \"%s\" với bạn lúc %s.", customerName, combinedServiceNames, timeInfo),
+                    "BOOKING_CREATED",
+                    "/staff"
+            );
+        }
+
+        return mapToResponse(saved);
     }
 
-    private AppointmentResponse executeCreateAppointment(String userEmail, AppointmentRequest request) {
+    private AppointmentEntity executeCreateAppointment(String userEmail, AppointmentRequest request) {
         UserEntity customer = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin khách hàng"));
 
@@ -103,7 +136,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         LocalTime startTime = request.getStartTime();
         LocalTime endTime = startTime.plusMinutes(totalMinutes);
 
-        // Chặn đặt lịch trong quá khứ hoặc quá sát giờ hiện tại (tối thiểu trước 30 phút)
         LocalDateTime requestedDateTime = LocalDateTime.of(appointmentDate, startTime);
         LocalDateTime earliestAllowedTime = LocalDateTime.now().plusMinutes(30);
 
@@ -154,10 +186,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .collect(Collectors.toList());
 
         appointment.setDetails(detailList);
-
-        AppointmentEntity saved = appointmentRepository.save(appointment);
-        emailNotificationService.sendBookingCreatedEmail(saved);
-        return mapToResponse(saved);
+        return appointmentRepository.save(appointment);
     }
 
     @Override
@@ -184,7 +213,6 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalStateException("Chỉ có thể hủy lịch hẹn đang chờ xác nhận hoặc đã xác nhận");
         }
 
-        // Kiểm tra quy định hủy trước 24h
         LocalDateTime appointmentDateTime = LocalDateTime.of(
                 appointment.getAppointmentDate(),
                 appointment.getStartTime()
@@ -203,6 +231,28 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         AppointmentEntity saved = appointmentRepository.save(appointment);
         emailNotificationService.sendStatusChangedEmail(saved, reason);
+
+        String timeInfo = saved.getStartTime().toString().substring(0, 5) + " ngày " + saved.getAppointmentDate();
+        notificationService.sendToAllAdmins(
+                "Khách hàng hủy lịch hẹn",
+                String.format("Khách %s đã hủy lịch hẹn #%d lúc %s.",
+                        saved.getCustomer().getFullName(), saved.getId(), timeInfo),
+                "BOOKING_STATUS",
+                "/admin/dashboard"
+        );
+
+        UserEntity assignedStaff = getAssignedStaff(saved);
+        if (assignedStaff != null) {
+            notificationService.sendToUser(
+                    assignedStaff.getEmail(),
+                    "Lịch hẹn đã bị hủy",
+                    String.format("Khách %s đã hủy lịch hẹn lúc %s.",
+                            saved.getCustomer().getFullName(), timeInfo),
+                    "BOOKING_STATUS",
+                    "/staff"
+            );
+        }
+
         return mapToResponse(saved);
     }
 
@@ -240,17 +290,34 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setStatus(upperStatus);
         AppointmentEntity saved = appointmentRepository.save(appointment);
         emailNotificationService.sendStatusChangedEmail(saved, reason);
+
+        String timeInfo = saved.getStartTime().toString().substring(0, 5) + " ngày " + saved.getAppointmentDate();
+        String statusLabel = switch (upperStatus) {
+            case "CONFIRMED" -> "đã được xác nhận";
+            case "COMPLETED" -> "đã hoàn thành";
+            case "CANCELLED" -> "đã bị hủy";
+            default -> "đã cập nhật sang trạng thái " + upperStatus;
+        };
+
+        notificationService.sendToUser(
+                saved.getCustomer().getEmail(),
+                "Cập nhật trạng thái lịch hẹn",
+                String.format("Lịch hẹn #%d lúc %s của bạn %s.", saved.getId(), timeInfo, statusLabel),
+                "BOOKING_STATUS",
+                "/my-bookings"
+        );
+
         return mapToResponse(saved);
     }
 
     @Override
     public AppointmentResponse assignStaff(Long id, Long staffId) {
-        // Lấy thông tin ngày hẹn trước để xác định đúng ổ khóa Redis trùng khớp với createAppointment
         AppointmentEntity preCheck = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn"));
 
         String lockKey = String.format("lock:booking:staff:%d:date:%s", staffId, preCheck.getAppointmentDate());
         RLock lock = redissonClient.getLock(lockKey);
+        AppointmentEntity saved;
 
         try {
             boolean isLocked = lock.tryLock(5, 10, TimeUnit.SECONDS);
@@ -258,8 +325,8 @@ public class AppointmentServiceImpl implements AppointmentService {
                 throw new RuntimeException("Kỹ thuật viên này đang được xử lý lịch đặt khác, vui lòng thử lại sau vài giây!");
             }
 
-            // Mở Transaction BÊN TRONG vùng khóa để đảm bảo COMMIT xong mới nhả khóa
-            return transactionTemplate.execute(status -> executeAssignStaff(id, staffId));
+            // 1. Thực thi và COMMIT transaction phân công KTV trước
+            saved = transactionTemplate.execute(status -> executeAssignStaff(id, staffId));
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -269,10 +336,33 @@ public class AppointmentServiceImpl implements AppointmentService {
                 lock.unlock();
             }
         }
+
+        if (saved == null) {
+            throw new RuntimeException("Không thể phân công kỹ thuật viên!");
+        }
+
+        // 2. Gửi thông báo real-time sau khi đã COMMIT DB
+        UserEntity assignedStaff = getAssignedStaff(saved);
+        if (assignedStaff != null) {
+            String combinedServiceNames = saved.getDetails().stream()
+                    .map(d -> d.getService().getName())
+                    .collect(Collectors.joining(", "));
+            String timeInfo = saved.getStartTime().toString().substring(0, 5) + " ngày " + saved.getAppointmentDate();
+
+            notificationService.sendToUser(
+                    assignedStaff.getEmail(),
+                    "Được phân công lịch hẹn mới",
+                    String.format("Quản lý đã phân công bạn phục vụ dịch vụ \"%s\" lúc %s.",
+                            combinedServiceNames, timeInfo),
+                    "BOOKING_STATUS",
+                    "/staff"
+            );
+        }
+
+        return mapToResponse(saved);
     }
 
-    private AppointmentResponse executeAssignStaff(Long id, Long staffId) {
-        // Query lại bên trong transaction để đảm bảo entity luôn ở trạng thái mới nhất (Managed)
+    private AppointmentEntity executeAssignStaff(Long id, Long staffId) {
         AppointmentEntity appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn"));
 
@@ -283,7 +373,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         UserEntity staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy kỹ thuật viên"));
 
-        // 1. Kiểm tra KTV có đang nghỉ phép trong khung giờ này không
         if (staffLeaveRepository.isStaffOnLeave(
                 staffId,
                 appointment.getAppointmentDate(),
@@ -292,7 +381,6 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new RuntimeException("Kỹ thuật viên này đang nghỉ phép vào khung giờ trên");
         }
 
-        // 2. Kiểm tra KTV có bị trùng lịch hẹn khác không
         if (appointmentRepository.existsStaffConflict(
                 staffId,
                 appointment.getAppointmentDate(),
@@ -301,25 +389,21 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new RuntimeException("Kỹ thuật viên này bị trùng lịch vào khung giờ trên");
         }
 
-        // Gán KTV cho tất cả dịch vụ trong lịch hẹn
         for (AppointmentDetailEntity detail : appointment.getDetails()) {
             detail.setStaff(staff);
         }
 
-        AppointmentEntity saved = appointmentRepository.save(appointment);
-        return mapToResponse(saved);
+        return appointmentRepository.save(appointment);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getStaffBusySlots(Long staffId, LocalDate date) {
-        // 1. Lấy danh sách lịch hẹn đang hoạt động của KTV trong ngày
         List<AppointmentResponse> busySlots = appointmentRepository.findActiveAppointmentsByStaffAndDate(staffId, date)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
 
-        // 2. Gộp thêm các khoảng thời gian KTV nghỉ phép đã được duyệt (APPROVED)
         List<StaffLeaveEntity> approvedLeaves = staffLeaveRepository
                 .findByStaffIdAndLeaveDateAndStatus(staffId, date, "APPROVED");
 
@@ -346,10 +430,12 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .map(this::mapToResponse);
     }
 
-
-
-
-
+    private UserEntity getAssignedStaff(AppointmentEntity appointment) {
+        if (appointment.getDetails() == null || appointment.getDetails().isEmpty()) {
+            return null;
+        }
+        return appointment.getDetails().get(0).getStaff();
+    }
 
     private AppointmentResponse mapToResponse(AppointmentEntity a) {
         List<AppointmentResponse.DetailItem> detailItems = a.getDetails().stream()
@@ -364,7 +450,6 @@ public class AppointmentServiceImpl implements AppointmentService {
                         .build())
                 .collect(Collectors.toList());
 
-        // Ghép tên các dịch vụ để hiển thị gọn trên UI
         String combinedServiceNames = detailItems.stream()
                 .map(AppointmentResponse.DetailItem::getServiceName)
                 .collect(Collectors.joining(", "));
@@ -393,6 +478,4 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .createdAt(a.getCreatedAt().toLocalDateTime())
                 .build();
     }
-
-
 }

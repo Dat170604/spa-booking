@@ -1,13 +1,67 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subject, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { TokenService } from './token.service';
+import {
+  UserResponse,
+  UpdateMyProfileRequest,
+  UpdateMyProfileResponse,
+  ChangePasswordRequest,
+} from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
+  private http = inject(HttpClient);
+  private tokenService = inject(TokenService);
   private readonly API_URL = `${environment.apiUrl}/users`;
 
-  constructor(private http: HttpClient) {}
+  // Phát sự kiện khi người dùng cập nhật hồ sơ hoặc ảnh đại diện để Navbar cập nhật ngay lập tức
+  private profileUpdatedSubject = new Subject<UserResponse>();
+  public profileUpdated$ = this.profileUpdatedSubject.asObservable();
+
+  // ================== THÔNG TIN CÁ NHÂN (MY PROFILE) ==================
+
+  getMyProfile(): Observable<UserResponse> {
+    return this.http
+      .get<UserResponse>(`${this.API_URL}/me`)
+      .pipe(tap((profile) => this.syncLocalUser(profile)));
+  }
+
+  updateMyProfile(payload: UpdateMyProfileRequest): Observable<UpdateMyProfileResponse> {
+    return this.http.put<UpdateMyProfileResponse>(`${this.API_URL}/me`, payload).pipe(
+      tap((res) => {
+        this.syncLocalUser(res.profile);
+        if (res.emailChanged && res.accessToken && res.refreshToken) {
+          this.tokenService.saveTokens(res.accessToken, res.refreshToken);
+        }
+      }),
+    );
+  }
+
+  changePassword(payload: ChangePasswordRequest): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(`${this.API_URL}/me/password`, payload);
+  }
+
+  uploadMyAvatar(file: File): Observable<UserResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http
+      .post<UserResponse>(`${this.API_URL}/me/avatar`, formData)
+      .pipe(tap((profile) => this.syncLocalUser(profile)));
+  }
+
+  private syncLocalUser(profile: UserResponse): void {
+    const current = this.tokenService.getUserInfo() || {};
+    const merged: UserResponse = {
+      ...current,
+      ...profile,
+    };
+    this.tokenService.saveUserInfo(merged);
+    this.profileUpdatedSubject.next(merged);
+  }
+
+  // ================== QUẢN LÝ NGƯỜI DÙNG (ADMIN / STAFF) ==================
 
   searchUsers(
     keyword: string = '',

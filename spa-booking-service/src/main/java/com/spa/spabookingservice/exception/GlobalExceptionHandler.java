@@ -1,5 +1,6 @@
 package com.spa.spabookingservice.exception;
 
+import com.spa.spabookingservice.dto.common.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -17,11 +18,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
-import com.spa.spabookingservice.dto.common.ErrorResponse;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -58,6 +58,12 @@ public class GlobalExceptionHandler {
         return build(ErrorCode.BAD_REQUEST, ErrorCode.BAD_REQUEST.getDefaultMessage(), request, null);
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex,
+                                                             HttpServletRequest request) {
+        return build(ErrorCode.BAD_REQUEST, "Dung lượng tệp tải lên vượt quá giới hạn cho phép (tối đa 10MB)!", request, null);
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethod(HttpRequestMethodNotSupportedException ex,
                                                       HttpServletRequest request) {
@@ -81,22 +87,22 @@ public class GlobalExceptionHandler {
         return build(ErrorCode.CONFLICT, ErrorCode.CONFLICT.getDefaultMessage(), request, null);
     }
 
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<ErrorResponse> handleLockedException(LockedException ex, HttpServletRequest request) {
+        ErrorResponse error = ErrorResponse.builder()
+                .status(HttpStatus.FORBIDDEN.value())
+                .code("ACCOUNT_LOCKED")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(Instant.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnknown(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception", ex);
         return build(ErrorCode.INTERNAL_ERROR, ErrorCode.INTERNAL_ERROR.getDefaultMessage(), request, null);
-    }
-
-    @ExceptionHandler(LockedException.class)
-    public ResponseEntity<ErrorResponse> handleLockedException(LockedException ex, HttpServletRequest request) {
-        ErrorResponse error = ErrorResponse.builder()
-                .status(HttpStatus.FORBIDDEN.value()) // 403 Forbidden
-                .code("ACCOUNT_LOCKED")
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .timestamp(Instant.from(LocalDateTime.now()))
-                .build();
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     private ResponseEntity<ErrorResponse> build(ErrorCode code, String message, HttpServletRequest request,
@@ -104,6 +110,4 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(code.getStatus())
                 .body(ErrorResponse.of(code, message, request.getRequestURI(), fieldErrors));
     }
-
-
 }

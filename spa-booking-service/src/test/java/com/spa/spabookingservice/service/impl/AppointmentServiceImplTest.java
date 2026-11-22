@@ -5,12 +5,11 @@ import com.spa.spabookingservice.dto.appointment.AppointmentResponse;
 import com.spa.spabookingservice.entity.*;
 import com.spa.spabookingservice.repository.*;
 import com.spa.spabookingservice.service.EmailNotificationService;
-import com.spa.spabookingservice.service.impl.AppointmentServiceImpl;
+import com.spa.spabookingservice.service.NotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
@@ -41,9 +40,9 @@ class AppointmentServiceImplTest {
     @Mock private RedissonClient redissonClient;
     @Mock private TransactionTemplate transactionTemplate;
     @Mock private EmailNotificationService emailNotificationService;
+    @Mock private NotificationService notificationService;
     @Mock private RLock rLock;
 
-    @InjectMocks
     private AppointmentServiceImpl appointmentService;
 
     private UserEntity customer;
@@ -53,6 +52,18 @@ class AppointmentServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        appointmentService = new AppointmentServiceImpl(
+                appointmentRepository,
+                userRepository,
+                branchRepository,
+                serviceRepository,
+                staffLeaveRepository,
+                redissonClient,
+                transactionTemplate,
+                emailNotificationService,
+                notificationService
+        );
+
         customer = UserEntity.builder().id(1L).fullName("Khách A").email("khach@spa.com").phone("0901111111").build();
         staff = UserEntity.builder().id(2L).fullName("KTV Lan").email("lan@spa.com").build();
         branch = BranchEntity.builder().id(10L).name("Chi nhánh Q1").openTime(LocalTime.of(8, 0)).closeTime(LocalTime.of(21, 0)).active(true).build();
@@ -85,6 +96,7 @@ class AppointmentServiceImplTest {
         when(serviceRepository.findAllById(List.of(100L))).thenReturn(List.of(service));
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(appointmentRepository.existsStaffConflict(eq(2L), any(), eq(LocalTime.of(10, 0)), eq(LocalTime.of(11, 0)))).thenReturn(false);
+        when(staffLeaveRepository.isStaffOnLeave(eq(2L), any(), eq(LocalTime.of(10, 0)), eq(LocalTime.of(11, 0)))).thenReturn(false);
         when(appointmentRepository.save(any())).thenAnswer(inv -> {
             AppointmentEntity a = inv.getArgument(0);
             a.setId(88L);
@@ -98,6 +110,8 @@ class AppointmentServiceImplTest {
         assertEquals(LocalTime.of(11, 0), res.getEndTime());
         assertEquals(new BigDecimal("500000"), res.getTotalAmount());
         verify(emailNotificationService).sendBookingCreatedEmail(any());
+        verify(notificationService).sendToAllAdmins(anyString(), anyString(), anyString(), anyString());
+        verify(notificationService).sendToUser(eq("lan@spa.com"), anyString(), anyString(), anyString(), anyString());
         verify(rLock).unlock();
     }
 
@@ -159,6 +173,7 @@ class AppointmentServiceImplTest {
 
         when(appointmentRepository.findById(77L)).thenReturn(Optional.of(appointment));
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
+        when(staffLeaveRepository.isStaffOnLeave(2L, date, LocalTime.of(14, 0), LocalTime.of(15, 0))).thenReturn(false);
         when(appointmentRepository.existsStaffConflict(2L, date, LocalTime.of(14, 0), LocalTime.of(15, 0))).thenReturn(false);
         when(appointmentRepository.save(any())).thenReturn(appointment);
 
@@ -166,6 +181,7 @@ class AppointmentServiceImplTest {
 
         assertEquals(2L, res.getStaffId());
         verify(redissonClient).getLock("lock:booking:staff:2:date:" + date);
+        verify(notificationService).sendToUser(eq("lan@spa.com"), anyString(), anyString(), anyString(), anyString());
         verify(rLock).unlock();
     }
 
