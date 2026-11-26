@@ -1,5 +1,6 @@
 package com.spa.spabookingservice.controller;
 
+import com.spa.spabookingservice.audit.LogActivity;
 import com.spa.spabookingservice.dto.user.*;
 import com.spa.spabookingservice.service.UserService;
 import jakarta.validation.Valid;
@@ -34,6 +35,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getMyProfile(authentication.getName()));
     }
 
+    @LogActivity(module = "USER", action = "UPDATE_MY_PROFILE", description = "Người dùng cập nhật thông tin cá nhân")
     @PutMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> updateMyProfile(
@@ -43,6 +45,7 @@ public class UserController {
         return ResponseEntity.ok(userService.updateMyProfile(authentication.getName(), request));
     }
 
+    @LogActivity(module = "USER", action = "CHANGE_PASSWORD", description = "Người dùng đổi mật khẩu")
     @PatchMapping("/me/password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> changePassword(
@@ -98,7 +101,8 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.createStaff(request));
     }
 
-    @PutMapping("/{id}")
+    @LogActivity(module = "USER", action = "UPDATE_USER", description = "Admin thay đổi thông tin tài khoản")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable Long id,
@@ -107,6 +111,7 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
+    @LogActivity(module = "USER", action = "UPDATE_USER_ROLES", description = "Admin thay đổi quyền tài khoản")
     @PatchMapping("/{id}/roles")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateUserRoles(
@@ -116,6 +121,7 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUserRoles(id, request));
     }
 
+    @LogActivity(module = "USER", action = "UPDATE_USER_BRANCH", description = "Admin chuyển chi nhánh làm việc nhân viên")
     @PatchMapping("/{id}/branch")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> updateUserBranch(
@@ -125,6 +131,7 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUserBranch(id, request.getBranchId()));
     }
 
+    @LogActivity(module = "USER", action = "TOGGLE_USER_STATUS", description = "Admin khóa/mở khóa tài khoản")
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> toggleUserStatus(@PathVariable Long id) {
@@ -132,6 +139,7 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @LogActivity(module = "USER", action = "DELETE_USER", description = "Admin xóa tài khoản")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {

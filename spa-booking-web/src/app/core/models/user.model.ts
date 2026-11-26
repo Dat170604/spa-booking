@@ -6,7 +6,7 @@ export interface UserResponse {
   avatarUrl?: string | null;
   fullName: string;
   email: string;
-  phone: string;
+  phone?: string | null;
   status: string;
   active?: boolean;
   roles: string[];
@@ -15,11 +15,10 @@ export interface UserResponse {
 }
 
 export interface UserUpdateRequest {
-  fullName: string;
-  email: string;
-  phone: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
   password?: string;
-  branchId?: number;
   status?: string;
 }
 

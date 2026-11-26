@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import { TokenService } from './token.service';
 import {
   UserResponse,
+  UserUpdateRequest,
   UpdateMyProfileRequest,
   UpdateMyProfileResponse,
   ChangePasswordRequest,
@@ -16,7 +17,6 @@ export class UserService {
   private tokenService = inject(TokenService);
   private readonly API_URL = `${environment.apiUrl}/users`;
 
-  // Phát sự kiện khi người dùng cập nhật hồ sơ hoặc ảnh đại diện để Navbar cập nhật ngay lập tức
   private profileUpdatedSubject = new Subject<UserResponse>();
   public profileUpdated$ = this.profileUpdatedSubject.asObservable();
 
@@ -53,10 +53,7 @@ export class UserService {
 
   private syncLocalUser(profile: UserResponse): void {
     const current = this.tokenService.getUserInfo() || {};
-    const merged: UserResponse = {
-      ...current,
-      ...profile,
-    };
+    const merged: UserResponse = { ...current, ...profile };
     this.tokenService.saveUserInfo(merged);
     this.profileUpdatedSubject.next(merged);
   }
@@ -103,15 +100,15 @@ export class UserService {
     return this.http.delete<void>(`${this.API_URL}/${id}`);
   }
 
-  updateProfile(id: number, data: { fullName: string; phone: string }): Observable<any> {
-    return this.http.put<any>(`${this.API_URL}/${id}`, data);
+  updateProfile(id: number, data: Partial<UserUpdateRequest>): Observable<UserResponse> {
+    return this.http.patch<UserResponse>(`${this.API_URL}/${id}`, data);
   }
 
-  updateUserRoles(id: number, roles: string[]): Observable<any> {
-    return this.http.patch<any>(`${this.API_URL}/${id}/roles`, { roles });
+  updateUserRoles(id: number, roles: string[]): Observable<UserResponse> {
+    return this.http.patch<UserResponse>(`${this.API_URL}/${id}/roles`, { roles });
   }
 
-  updateUserBranch(id: number, branchId: number): Observable<any> {
-    return this.http.patch<any>(`${this.API_URL}/${id}/branch`, { branchId });
+  updateUserBranch(id: number, branchId: number): Observable<UserResponse> {
+    return this.http.patch<UserResponse>(`${this.API_URL}/${id}/branch`, { branchId });
   }
 }

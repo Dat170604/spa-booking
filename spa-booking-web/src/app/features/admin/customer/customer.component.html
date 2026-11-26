@@ -48,20 +48,25 @@
           <td class="px-6 py-4 font-medium text-white">{{ customer.fullName }}</td>
           <td class="px-6 py-4">{{ customer.email }}</td>
           <td class="px-6 py-4">{{ customer.phone || '---' }}</td>
+          <!-- Cột Trạng thái -->
           <td class="px-6 py-4">
-              <span [ngClass]="{
-                'bg-emerald-500/10 text-emerald-400 border-emerald-500/30': customer.status === 'ACTIVE',
-                'bg-red-500/10 text-red-400 border-red-500/30': customer.status !== 'ACTIVE'
-              }" class="px-3 py-1 text-xs rounded-full border font-medium">
-                {{ customer.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa' }}
-              </span>
+            <span [ngClass]="{
+              'bg-emerald-500/10 text-emerald-400 border-emerald-500/30': customer.active === true || customer.status === 'ACTIVE',
+              'bg-red-500/10 text-red-400 border-red-500/30': customer.active === false || (customer.active === undefined && customer.status !== 'ACTIVE')
+            }" class="px-3 py-1 text-xs rounded-full border font-medium">
+              {{ (customer.active === true || customer.status === 'ACTIVE') ? 'Hoạt động' : 'Đã khóa' }}
+            </span>
           </td>
+
+          <!-- Cột Thao tác -->
           <td class="px-6 py-4 text-center">
             <button
               (click)="toggleStatus(customer.id)"
-              [class]="customer.status === 'ACTIVE' ? 'text-red-400 border-red-500/40 hover:bg-red-500/10' : 'text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10'"
+              [class]="(customer.active === true || customer.status === 'ACTIVE')
+                ? 'text-red-400 border-red-500/40 hover:bg-red-500/10'
+                : 'text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10'"
               class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition">
-              {{ customer.status === 'ACTIVE' ? 'Khóa tài khoản' : 'Kích hoạt' }}
+              {{ (customer.active === true || customer.status === 'ACTIVE') ? 'Khóa tài khoản' : 'Kích hoạt' }}
             </button>
           </td>
         </tr>

@@ -1,5 +1,6 @@
 package com.spa.spabookingservice.controller;
 
+import com.spa.spabookingservice.audit.LogActivity;
 import com.spa.spabookingservice.dto.service.ServiceRequest;
 import com.spa.spabookingservice.dto.service.ServiceResponse;
 import com.spa.spabookingservice.service.ServiceService;
@@ -59,6 +60,7 @@ public class ServicesController {
     }
 
     // 4. Tạo dịch vụ mới
+    @LogActivity(module = "SERVICE", action = "CREATE_SERVICE", description = "Admin thêm dịch vụ Spa mới")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ServiceResponse> createService(@Valid @RequestBody ServiceRequest request) {
@@ -66,6 +68,7 @@ public class ServicesController {
     }
 
     // 5. Cập nhật dịch vụ
+    @LogActivity(module = "SERVICE", action = "UPDATE_SERVICE", description = "Admin cập nhật thông tin dịch vụ Spa")
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ServiceResponse> updateService(
@@ -76,6 +79,7 @@ public class ServicesController {
     }
 
     // 6. Bật / Tắt trạng thái dịch vụ (Khớp với nút Tạm ngưng / Mở bán)
+    @LogActivity(module = "SERVICE", action = "TOGGLE_SERVICE_STATUS", description = "Admin bật/tắt trạng thái dịch vụ Spa")
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> toggleServiceStatus(@PathVariable Long id) {
@@ -85,6 +89,7 @@ public class ServicesController {
 
     // 7. Xóa dịch vụ
     @DeleteMapping("/{id}")
+    @LogActivity(module = "SERVICE", action = "DELETE_SERVICE", description = "Admin xóa dịch vụ Spa")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteService(@PathVariable Long id) {
         serviceService.deleteService(id);

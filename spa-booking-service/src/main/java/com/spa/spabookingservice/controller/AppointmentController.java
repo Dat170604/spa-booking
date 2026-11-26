@@ -1,5 +1,6 @@
 package com.spa.spabookingservice.controller;
 
+import com.spa.spabookingservice.audit.LogActivity;
 import com.spa.spabookingservice.dto.appointment.AppointmentRequest;
 import com.spa.spabookingservice.dto.appointment.AppointmentResponse;
 import com.spa.spabookingservice.service.AppointmentService;
@@ -25,6 +26,7 @@ public class AppointmentController {
     private final AppointmentService appointmentService;
 
     // 1. Khách hàng đặt lịch mới
+    @LogActivity(module = "APPOINTMENT", action = "CREATE_APPOINTMENT", description = "Khách hàng đặt lịch hẹn mới")
     @PostMapping
     public ResponseEntity<AppointmentResponse> createAppointment(
             Authentication authentication,
@@ -82,6 +84,7 @@ public class AppointmentController {
     }
 
     // 6. Admin cập nhật trạng thái (CONFIRMED, COMPLETED, CANCELLED, NO_SHOW)
+    @LogActivity(module = "APPOINTMENT", action = "UPDATE_APPOINTMENT_STATUS", description = "Admin cập nhật trạng thái lịch hẹn")
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AppointmentResponse> updateStatus(
@@ -93,6 +96,7 @@ public class AppointmentController {
     }
 
     // 7. Admin phân công kỹ thuật viên
+    @LogActivity(module = "APPOINTMENT", action = "ASSIGN_STAFF", description = "Admin phân công kỹ thuật viên")
     @PatchMapping("/{id}/assign-staff")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AppointmentResponse> assignStaff(

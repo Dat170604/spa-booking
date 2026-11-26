@@ -1,5 +1,6 @@
 package com.spa.spabookingservice.controller;
 
+import com.spa.spabookingservice.audit.LogActivity;
 import com.spa.spabookingservice.dto.branch.BranchRequest;
 import com.spa.spabookingservice.dto.branch.BranchResponse;
 import com.spa.spabookingservice.service.BranchService;
@@ -63,6 +64,7 @@ public class BranchController {
     }
 
     // Tạo chi nhánh mới (Chỉ Admin)
+    @LogActivity(module = "BRANCH", action = "CREATE_BRANCH", description = "Admin thêm chi nhánh mới")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BranchResponse> createBranch(@Valid @RequestBody BranchRequest request) {
@@ -70,6 +72,7 @@ public class BranchController {
     }
 
     // Cập nhật chi nhánh (Chỉ Admin)
+    @LogActivity(module = "BRANCH", action = "UPDATE_BRANCH", description = "Admin cập nhật thông tin chi nhánh")
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BranchResponse> updateBranch(
@@ -80,6 +83,7 @@ public class BranchController {
     }
 
     // Bật / Tắt trạng thái chi nhánh (Chỉ Admin)
+    @LogActivity(module = "BRANCH", action = "TOGGLE_BRANCH_STATUS", description = "Admin bật/tắt trạng thái hoạt động chi nhánh")
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> toggleBranchStatus(@PathVariable Long id) {
@@ -88,6 +92,7 @@ public class BranchController {
     }
 
     // Xóa chi nhánh (Chỉ Admin)
+    @LogActivity(module = "BRANCH", action = "DELETE_BRANCH", description = "Admin xóa chi nhánh")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteBranch(@PathVariable Long id) {

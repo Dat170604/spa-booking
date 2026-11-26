@@ -11,15 +11,12 @@ import lombok.Setter;
 @Setter
 public class UserUpdateRequest {
 
-    @NotBlank(message = "Họ tên không được để trống")
     @Size(max = 100, message = "Họ tên không vượt quá 100 ký tự")
     private String fullName;
 
-    @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không đúng định dạng")
     private String email;
 
-    @NotBlank(message = "Số điện thoại không được để trống")
     @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$", message = "Số điện thoại không hợp lệ")
     private String phone;
 

@@ -1,9 +1,10 @@
-package com.spa.spabookingservice.service;
+package com.spa.spabookingservice.service.impl;
 
 import com.spa.spabookingservice.entity.NotificationEntity;
 import com.spa.spabookingservice.entity.UserEntity;
 import com.spa.spabookingservice.repository.NotificationRepository;
 import com.spa.spabookingservice.repository.UserRepository;
+import com.spa.spabookingservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;

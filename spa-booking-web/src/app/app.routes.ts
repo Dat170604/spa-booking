@@ -117,6 +117,13 @@ export const routes: Routes = [
             (m) => m.AdminStaffLeaveComponent,
           ),
       },
+      {
+        path: 'audit-logs',
+        loadComponent: () =>
+          import('./features/admin/audit-logs/audit-logs.component').then(
+            (m) => m.AuditLogsComponent,
+          ),
+      },
     ],
   },
 

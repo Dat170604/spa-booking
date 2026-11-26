@@ -76,20 +76,36 @@ public class UserServiceImpl implements UserService {
         UserEntity user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Không tìm thấy người dùng"));
 
-        if (!user.getEmail().equalsIgnoreCase(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
-            throw new AppException(ErrorCode.CONFLICT, "Email đã được sử dụng bởi tài khoản khác");
+        // 1. Chỉ cập nhật Họ tên nếu có gửi lên
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName().trim());
         }
 
-        if (!user.getPhone().equals(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
-            throw new AppException(ErrorCode.CONFLICT, "Số điện thoại đã được sử dụng bởi tài khoản khác");
+        // 2. Chỉ cập nhật & check trùng Email nếu có gửi lên và khác email hiện tại
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            String newEmail = request.getEmail().trim().toLowerCase();
+            if (!newEmail.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmail(newEmail)) {
+                throw new AppException(ErrorCode.CONFLICT, "Email đã được sử dụng bởi tài khoản khác");
+            }
+            user.setEmail(newEmail);
         }
 
-        user.setFullName(request.getFullName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
+        // 3. Chỉ cập nhật & check trùng SĐT nếu có gửi lên (dùng Objects.equals để tránh NullPointerException)
+        if (request.getPhone() != null) {
+            String newPhone = request.getPhone().trim();
+            if (newPhone.isEmpty()) {
+                user.setPhone(null); // Cho phép xóa trắng SĐT nếu client chủ động gửi chuỗi rỗng ""
+            } else {
+                if (!Objects.equals(newPhone, user.getPhone()) && userRepository.existsByPhone(newPhone)) {
+                    throw new AppException(ErrorCode.CONFLICT, "Số điện thoại đã được sử dụng bởi tài khoản khác");
+                }
+                user.setPhone(newPhone);
+            }
+        }
 
+        // 4. Chỉ đổi mật khẩu nếu có gửi lên
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setPassword(passwordEncoder.encode(request.getPassword().trim()));
         }
 
         return mapToResponse(userRepository.save(user));

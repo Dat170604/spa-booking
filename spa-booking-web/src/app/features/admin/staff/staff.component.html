@@ -57,14 +57,17 @@
               </span>
             </ng-container>
           </td>
+          <!-- Cột Trạng thái -->
           <td class="px-6 py-4">
-              <span [ngClass]="{
-                'bg-emerald-500/10 text-emerald-400 border-emerald-500/30': staff.status === 'ACTIVE',
-                'bg-red-500/10 text-red-400 border-red-500/30': staff.status !== 'ACTIVE'
-              }" class="px-3 py-1 text-xs rounded-full border font-medium">
-                {{ staff.status === 'ACTIVE' ? 'Đang làm việc' : 'Bị khóa' }}
-              </span>
+            <span [ngClass]="{
+              'bg-emerald-500/10 text-emerald-400 border-emerald-500/30': staff.active === true || staff.status === 'ACTIVE',
+              'bg-red-500/10 text-red-400 border-red-500/30': staff.active === false || (staff.active === undefined && staff.status !== 'ACTIVE')
+            }" class="px-3 py-1 text-xs rounded-full border font-medium">
+              {{ (staff.active === true || staff.status === 'ACTIVE') ? 'Đang làm việc' : 'Bị khóa' }}
+            </span>
           </td>
+
+          <!-- Cột Thao tác -->
           <td class="px-6 py-4 text-center space-x-2">
             <button
               (click)="openEditModal(staff)"
@@ -73,9 +76,11 @@
             </button>
             <button
               (click)="toggleStatus(staff.id)"
-              [class]="staff.status === 'ACTIVE' ? 'text-red-400 border-red-500/40 hover:bg-red-500/10' : 'text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10'"
+              [class]="(staff.active === true || staff.status === 'ACTIVE')
+                ? 'text-red-400 border-red-500/40 hover:bg-red-500/10'
+                : 'text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10'"
               class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition">
-              {{ staff.status === 'ACTIVE' ? 'Khóa' : 'Kích hoạt' }}
+              {{ (staff.active === true || staff.status === 'ACTIVE') ? 'Khóa' : 'Kích hoạt' }}
             </button>
           </td>
         </tr>
